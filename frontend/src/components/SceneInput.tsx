@@ -40,13 +40,14 @@ export function SceneInput({ disabled = false, onSubmit }: SceneInputProps) {
           disabled={disabled}
           onChange={(event) => setPrompt(event.target.value)}
           placeholder="Describe a scene..."
-          rows={3}
+          rows={2}
         />
         <button className="primary-action" disabled={disabled || !prompt.trim()}>
           Generate Scene
         </button>
       </form>
       <div className="example-chips" aria-label="Example prompts">
+        <span className="example-chips-label">Try:</span>
         {examples.map((example) => (
           <button
             className="chip"
