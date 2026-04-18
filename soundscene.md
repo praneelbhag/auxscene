@@ -43,14 +43,14 @@ User provides a text description of a scene. Can be concrete ("rainy Tokyo stree
 
 ### Step 2 — Abstract Detection + Web Search
 
-LLM classifies the input as concrete or abstract.
+Gemini classifies the input as concrete or abstract.
 
-- **If abstract:** fires targeted web searches ("sounds associated with peace", "ambient sounds for serenity"), reads results, extracts concrete sound descriptors
+- **If abstract:** uses Gemini with Google Search grounding to retrieve targeted results ("sounds associated with peace", "ambient sounds for serenity"), reads results, extracts concrete sound descriptors
 - **If concrete:** skips directly to decomposition
 
 ### Step 3 — LLM Decomposition
 
-Claude takes the concrete descriptors and decomposes them into individual sound elements with spatial metadata:
+Gemini takes the concrete descriptors and decomposes them into individual sound elements with spatial metadata:
 
 ```json
 {
@@ -72,7 +72,7 @@ Per element: pan and volume are derived from (x, y) coordinates. Reverb is appli
 
 ### Step 6 — Visual Generation
 
-The original scene description is sent to FLUX.1 via Replicate API in parallel with audio generation, producing a matching image displayed alongside the audio player.
+The original scene description is sent to Nano Banana Pro via the Gemini API in parallel with audio generation, producing a matching image displayed alongside the audio player.
 
 ---
 
@@ -93,11 +93,11 @@ Post-generation, users interact with a top-down 2D map with the listener fixed a
 
 | Component | Tool |
 |---|---|
-| Abstract detection + decomposition | Claude (Anthropic API) |
-| Web search grounding | Claude + web search tool |
+| Abstract detection + decomposition | Gemini 3.1 Pro Preview (Google GenAI SDK) |
+| Web search grounding | Gemini Google Search grounding |
 | Sound generation | ElevenLabs Sound Effects API V2 |
 | Spatial DSP + mixing | pedalboard + pydub |
-| Image generation | FLUX.1 via Replicate |
+| Image generation | Nano Banana Pro via Gemini API |
 | Real-time spatial audio | Web Audio API |
 | Backend | FastAPI |
 | Frontend | React |

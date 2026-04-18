@@ -1,0 +1,33 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .config import get_settings
+
+settings = get_settings()
+
+app = FastAPI(
+    title="SoundScene API",
+    description="Text-to-spatial audio generation backend.",
+    version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.parsed_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/api/health")
+async def health_check() -> dict[str, object]:
+    return {
+        "status": "ok",
+        "missingProviderKeys": settings.missing_provider_keys,
+        "llmModel": settings.gemini_model,
+        "thinkingLevel": settings.gemini_thinking_level,
+        "googleSearchGroundingEnabled": settings.enable_google_search_grounding,
+        "imageModel": settings.gemini_image_model,
+        "imageAspectRatio": settings.gemini_image_aspect_ratio,
+    }
