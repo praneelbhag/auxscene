@@ -1,11 +1,13 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import uuid4
+import asyncio
 
 from fastapi import APIRouter, HTTPException, Request, status
 
 from ..config import get_settings
 from .elevenlabs import ElevenLabsGenerationError, generate_all_sounds
+from .image_gen import generate_image
 from .schemas import (
     GenerateElementResponse,
     GenerateRequest,
@@ -66,14 +68,25 @@ async def generate_scene(payload: GenerateRequest, request: Request) -> Generate
 
     try:
         sound_prompts = [element.sound_prompt for element in payload.elements]
-        audio_results = await generate_all_sounds(
-            api_key=settings.elevenlabs_api_key,
-            sound_prompts=sound_prompts,
-            duration_seconds=duration,
-            model_id=settings.elevenlabs_model_id,
-            output_format=settings.elevenlabs_output_format,
-            prompt_influence=settings.elevenlabs_prompt_influence,
+        audio_task = asyncio.create_task(
+            generate_all_sounds(
+                api_key=settings.elevenlabs_api_key,
+                sound_prompts=sound_prompts,
+                duration_seconds=duration,
+                model_id=settings.elevenlabs_model_id,
+                output_format=settings.elevenlabs_output_format,
+                prompt_influence=settings.elevenlabs_prompt_influence,
+            )
         )
+        image_task = asyncio.create_task(
+            generate_image(
+                prompt=payload.concrete_description or payload.original_prompt,
+                output_dir=output_dir,
+                scene_id=job_id,
+            )
+        )
+
+        audio_results = await audio_task
 
         processed_tracks: list[AudioTrack] = []
         element_responses: list[GenerateElementResponse] = []
@@ -107,18 +120,27 @@ async def generate_scene(payload: GenerateRequest, request: Request) -> Generate
         export_wav(mixed, mixed_file)
 
         audio_url = _static_url(request, mixed_file)
+        image_url = None
+        try:
+            image_file = await image_task
+            image_url = _static_url(request, image_file)
+        except Exception as exc:
+            job_state.error = f"Image generation failed: {exc}"
+
         job_state.status = "completed"
         job_state.audio_url = audio_url
-        job_state.image_url = None
+        job_state.image_url = image_url
 
         return GenerateResponse(
             job_id=job_id,
             audio_url=audio_url,
-            image_url=None,
+            image_url=image_url,
             elements=element_responses,
             duration_seconds=duration,
         )
     except ElevenLabsGenerationError as exc:
+        if "image_task" in locals():
+            image_task.cancel()
         job_state.status = "failed"
         job_state.error = str(exc)
         raise HTTPException(
@@ -126,6 +148,8 @@ async def generate_scene(payload: GenerateRequest, request: Request) -> Generate
             detail=str(exc),
         ) from exc
     except Exception as exc:
+        if "image_task" in locals():
+            image_task.cancel()
         job_state.status = "failed"
         job_state.error = str(exc)
         raise HTTPException(

@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ElementSidebar } from "./ElementSidebar";
 import {
   type AudioNodes,
+  pauseElement,
+  playElement,
   resumeAudioContext,
+  seekElement,
   setupElement,
   teardownElement,
   updateElementPosition,
@@ -21,6 +24,15 @@ const COLORS = [
   "#4ff7f0",
   "#f79c4f",
 ];
+
+const formatTime = (seconds: number) => {
+  if (!Number.isFinite(seconds)) return "0:00";
+  const minutes = Math.floor(seconds / 60);
+  const remaining = Math.floor(seconds % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${minutes}:${remaining}`;
+};
 
 export interface SpatialElement {
   id: string;
@@ -66,9 +78,12 @@ export default function SpatialEditor({ elements: initialElements, onSave }: Spa
   const [loadError, setLoadError] = useState<string | null>(null);
   const [headphoneMode, setHeadphoneMode] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [timelineTime, setTimelineTime] = useState(0);
+  const [timelineDuration, setTimelineDuration] = useState(0);
 
   const audioNodesRef = useRef<Record<string, AudioNodes>>({});
   const elementsRef = useRef(elements);
+  const timelineTimeRef = useRef(0);
   const originalPositions = useRef(
     Object.fromEntries(initialElements.map((el) => [el.id, { x: el.x, y: el.y }])),
   );
@@ -78,6 +93,29 @@ export default function SpatialEditor({ elements: initialElements, onSave }: Spa
   useEffect(() => {
     elementsRef.current = elements;
   }, [elements]);
+
+  useEffect(() => {
+    timelineTimeRef.current = timelineTime;
+  }, [timelineTime]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const timer = window.setInterval(() => {
+      const active = elementsRef.current
+        .map((element) => audioNodesRef.current[element.id])
+        .find((nodes) => nodes && !nodes.audio.paused);
+
+      if (active) {
+        setTimelineTime(active.audio.currentTime);
+        if (Number.isFinite(active.audio.duration)) {
+          setTimelineDuration(active.audio.duration);
+        }
+      }
+    }, 200);
+
+    return () => window.clearInterval(timer);
+  }, [isPlaying]);
 
   useEffect(() => {
     return () => {
@@ -105,27 +143,35 @@ export default function SpatialEditor({ elements: initialElements, onSave }: Spa
 
   const startElement = useCallback(async (element: InternalElement) => {
     await resumeAudioContext();
-    if (audioNodesRef.current[element.id]) return;
+    let nodes = audioNodesRef.current[element.id];
 
-    const nodes = await setupElement(element);
-    audioNodesRef.current[element.id] = nodes;
+    if (!nodes) {
+      nodes = await setupElement(element);
+      audioNodesRef.current[element.id] = nodes;
+    }
+
+    if (timelineTimeRef.current > 0) {
+      seekElement(nodes, timelineTimeRef.current);
+    }
+
     updateElementPosition(nodes, element.x, element.y);
     updateElementReverb(nodes, element.reverb);
+    await playElement(nodes);
+
+    if (Number.isFinite(nodes.audio.duration)) {
+      setTimelineDuration(nodes.audio.duration);
+    }
   }, []);
 
-  const stopElement = useCallback((id: string) => {
+  const pauseElementById = useCallback((id: string) => {
     const nodes = audioNodesRef.current[id];
     if (!nodes) return;
 
-    teardownElement(nodes);
-    delete audioNodesRef.current[id];
+    pauseElement(nodes);
   }, []);
 
   const handlePlay = async () => {
     setLoadError(null);
-    Object.values(audioNodesRef.current).forEach(teardownElement);
-    audioNodesRef.current = {};
-
     const failedIds = new Set<string>();
     const errors: string[] = [];
 
@@ -153,8 +199,7 @@ export default function SpatialEditor({ elements: initialElements, onSave }: Spa
   };
 
   const handlePause = () => {
-    Object.values(audioNodesRef.current).forEach(teardownElement);
-    audioNodesRef.current = {};
+    Object.values(audioNodesRef.current).forEach(pauseElement);
     setElements((current) => current.map((element) => ({ ...element, isPlaying: false })));
   };
 
@@ -163,8 +208,8 @@ export default function SpatialEditor({ elements: initialElements, onSave }: Spa
     const element = elementsRef.current.find((item) => item.id === id);
     if (!element) return;
 
-    if (audioNodesRef.current[id]) {
-      stopElement(id);
+    if (audioNodesRef.current[id] && !audioNodesRef.current[id].audio.paused) {
+      pauseElementById(id);
       setElements((current) =>
         current.map((item) => (item.id === id ? { ...item, isPlaying: false } : item)),
       );
@@ -269,6 +314,12 @@ export default function SpatialEditor({ elements: initialElements, onSave }: Spa
     setSaveMessage("Mix saved");
   };
 
+  const handleTimelineChange = (nextTime: number) => {
+    setTimelineTime(nextTime);
+    timelineTimeRef.current = nextTime;
+    Object.values(audioNodesRef.current).forEach((nodes) => seekElement(nodes, nextTime));
+  };
+
   return (
     <div className="spatial-editor">
       <div className="editor-main">
@@ -287,6 +338,22 @@ export default function SpatialEditor({ elements: initialElements, onSave }: Spa
 
       {loadError && <p className="load-error">{loadError}</p>}
 
+      <div className="editor-timeline">
+        <input
+          aria-label="Editor playback position"
+          disabled={!timelineDuration}
+          max={timelineDuration || 0}
+          min={0}
+          onChange={(event) => handleTimelineChange(Number(event.target.value))}
+          step={0.01}
+          type="range"
+          value={Math.min(timelineTime, timelineDuration || 0)}
+        />
+        <span>
+          {formatTime(timelineTime)} / {formatTime(timelineDuration)}
+        </span>
+      </div>
+
       <div className="editor-controls">
         {!isPlaying ? (
           <button className="control-btn play-btn" onClick={handlePlay} type="button">
@@ -294,7 +361,7 @@ export default function SpatialEditor({ elements: initialElements, onSave }: Spa
           </button>
         ) : (
           <button className="control-btn pause-btn" onClick={handlePause} type="button">
-            Stop All
+            Pause All
           </button>
         )}
         <button className="control-btn reset-btn" onClick={handleReset} type="button">

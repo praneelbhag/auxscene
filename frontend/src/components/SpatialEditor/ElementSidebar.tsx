@@ -73,7 +73,7 @@ export function ElementSidebar({
               onClick={() => onPlayToggle(el.id)}
               type="button"
             >
-              {el.isPlaying ? "Stop" : "Play"}
+              {el.isPlaying ? "Pause" : "Play"}
             </button>
             <button
               className={`toggle-btn solo-btn${el.solo ? " active" : ""}`}

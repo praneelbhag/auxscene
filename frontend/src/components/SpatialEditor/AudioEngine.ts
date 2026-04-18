@@ -1,5 +1,6 @@
 export interface AudioNodes {
-  source: AudioBufferSourceNode;
+  audio: HTMLAudioElement;
+  source: MediaElementAudioSourceNode;
   gainNode: GainNode;
   pannerNode: StereoPannerNode;
   reverbGain: GainNode;
@@ -13,7 +14,8 @@ let sharedImpulse: AudioBuffer | null = null;
 
 export function getAudioContext(): AudioContext {
   if (!audioContext) {
-    audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    audioContext = new (window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
   }
   return audioContext;
 }
@@ -37,6 +39,31 @@ function loadImpulseResponse(ctx: AudioContext): AudioBuffer {
   return sharedImpulse;
 }
 
+function waitForMetadata(audio: HTMLAudioElement): Promise<void> {
+  if (Number.isFinite(audio.duration) && audio.duration > 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      audio.removeEventListener("loadedmetadata", handleLoaded);
+      audio.removeEventListener("error", handleError);
+    };
+    const handleLoaded = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = () => {
+      cleanup();
+      reject(new Error(`Could not load ${audio.src}`));
+    };
+
+    audio.addEventListener("loadedmetadata", handleLoaded, { once: true });
+    audio.addEventListener("error", handleError, { once: true });
+    audio.load();
+  });
+}
+
 export async function setupElement(element: {
   id: string;
   x: number;
@@ -49,18 +76,15 @@ export async function setupElement(element: {
     await ctx.resume();
   }
 
-  const response = await fetch(element.individual_audio_url);
-  if (!response.ok) {
-    throw new Error(`Could not load ${element.individual_audio_url}`);
-  }
+  const audio = new Audio(element.individual_audio_url);
+  audio.crossOrigin = "anonymous";
+  audio.loop = true;
+  audio.preload = "auto";
+  audio.volume = 1;
 
-  const arrayBuffer = await response.arrayBuffer();
-  const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+  await waitForMetadata(audio);
 
-  const source = ctx.createBufferSource();
-  source.buffer = audioBuffer;
-  source.loop = true;
-
+  const source = ctx.createMediaElementSource(audio);
   const gainNode = ctx.createGain();
   gainNode.gain.value = 1 - element.y * 0.85;
 
@@ -79,23 +103,30 @@ export async function setupElement(element: {
   const muteGain = ctx.createGain();
   muteGain.gain.value = 1;
 
-  // Chain: source → gain → panner → muteGain → dry/wet split → destination
   source.connect(gainNode);
   gainNode.connect(pannerNode);
   pannerNode.connect(muteGain);
-
-  // Dry path
   muteGain.connect(dryGain);
   dryGain.connect(ctx.destination);
-
-  // Wet/reverb path
   muteGain.connect(convolver);
   convolver.connect(reverbGain);
   reverbGain.connect(ctx.destination);
 
-  source.start(0);
+  return { audio, source, gainNode, pannerNode, reverbGain, dryGain, convolver, muteGain };
+}
 
-  return { source, gainNode, pannerNode, reverbGain, dryGain, convolver, muteGain };
+export async function playElement(nodes: AudioNodes) {
+  await resumeAudioContext();
+  await nodes.audio.play();
+}
+
+export function pauseElement(nodes: AudioNodes) {
+  nodes.audio.pause();
+}
+
+export function seekElement(nodes: AudioNodes, time: number) {
+  if (!Number.isFinite(nodes.audio.duration) || nodes.audio.duration <= 0) return;
+  nodes.audio.currentTime = Math.max(0, Math.min(nodes.audio.duration, time));
 }
 
 export function updateElementPosition(nodes: AudioNodes, newX: number, newY: number) {
@@ -116,7 +147,7 @@ export function updateElementVolume(
   volume: number,
   muted: boolean,
   solo: boolean,
-  anySolo: boolean
+  anySolo: boolean,
 ) {
   const ctx = getAudioContext();
   const effective = muted ? 0 : anySolo && !solo ? 0 : volume;
@@ -124,8 +155,11 @@ export function updateElementVolume(
 }
 
 export function teardownElement(nodes: AudioNodes) {
+  nodes.audio.pause();
+  nodes.audio.src = "";
+  nodes.audio.load();
+
   try {
-    nodes.source.stop();
     nodes.source.disconnect();
     nodes.gainNode.disconnect();
     nodes.pannerNode.disconnect();
@@ -134,7 +168,7 @@ export function teardownElement(nodes: AudioNodes) {
     nodes.convolver.disconnect();
     nodes.reverbGain.disconnect();
   } catch {
-    // already stopped
+    // already disconnected
   }
 }
 

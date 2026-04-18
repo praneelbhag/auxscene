@@ -263,6 +263,34 @@
   align-items: center;
 }
 
+.editor-timeline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #1e1e30;
+  border-radius: 8px;
+  background: #111118;
+}
+
+.editor-timeline input[type="range"] {
+  width: 100%;
+  accent-color: #4fc97e;
+  cursor: pointer;
+}
+
+.editor-timeline input[type="range"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.editor-timeline span {
+  color: #888899;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .control-btn {
   padding: 10px var(--space-xl);
   border-radius: 8px;

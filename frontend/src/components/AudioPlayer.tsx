@@ -1,4 +1,4 @@
-import { MouseEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type AudioPlayerProps = {
   audioUrl: string;
@@ -62,16 +62,12 @@ export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
     }
   };
 
-  const seek = (event: MouseEvent<HTMLDivElement>) => {
+  const seek = (nextTime: number) => {
     const audio = audioRef.current;
     if (!audio || !duration) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const nextTime = ((event.clientX - rect.left) / rect.width) * duration;
     audio.currentTime = Math.max(0, Math.min(duration, nextTime));
     setCurrentTime(audio.currentTime);
   };
-
-  const progress = duration ? (currentTime / duration) * 100 : 0;
 
   return (
     <div className="audio-player">
@@ -84,18 +80,17 @@ export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
         {isPlaying ? <PauseIcon /> : <PlayIcon />}
       </button>
       <div className="audio-timeline">
-        <div
+        <input
           aria-label="Seek audio"
           className="progress-bar"
-          onClick={seek}
-          role="slider"
-          aria-valuemin={0}
-          aria-valuemax={Math.round(duration)}
-          aria-valuenow={Math.round(currentTime)}
-          tabIndex={0}
-        >
-          <div className="progress-fill" style={{ width: `${progress}%` }} />
-        </div>
+          disabled={!duration}
+          max={duration || 0}
+          min={0}
+          onChange={(event) => seek(Number(event.target.value))}
+          step={0.01}
+          type="range"
+          value={Math.min(currentTime, duration || 0)}
+        />
         <span>
           {formatTime(currentTime)} / {formatTime(duration)}
         </span>
