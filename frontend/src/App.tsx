@@ -59,25 +59,6 @@ export default function App() {
   }, [decomposeData, phase]);
 
   const handleSubmit = async (nextPrompt: string) => {
-    // #region agent log
-    fetch("http://127.0.0.1:7919/ingest/f36bc7cd-3af6-4165-9381-ffa5cd4add12", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ac51e2" },
-      body: JSON.stringify({
-        sessionId: "ac51e2",
-        runId: "pre-fix",
-        hypothesisId: "H5",
-        location: "frontend/src/App.tsx:handleSubmit:entry",
-        message: "User submitted prompt",
-        data: {
-          promptLength: nextPrompt.length,
-          promptPreview: nextPrompt.slice(0, 40),
-          currentOrigin: window.location.origin,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     setPrompt(nextPrompt);
     setError(null);
     setDecomposeData(null);
@@ -105,25 +86,6 @@ export default function App() {
       setGenerateData(generated);
       setPhase("result");
     } catch (caught) {
-      // #region agent log
-      fetch("http://127.0.0.1:7919/ingest/f36bc7cd-3af6-4165-9381-ffa5cd4add12", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ac51e2" },
-        body: JSON.stringify({
-          sessionId: "ac51e2",
-          runId: "pre-fix",
-          hypothesisId: "H5",
-          location: "frontend/src/App.tsx:handleSubmit:catch",
-          message: "Submission flow failed",
-          data: {
-            errorType: caught instanceof Error ? caught.name : typeof caught,
-            errorMessage:
-              caught instanceof Error ? caught.message : "non-Error thrown value",
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       setError(caught instanceof Error ? caught.message : "Scene generation failed.");
       setPhase("input");
     }

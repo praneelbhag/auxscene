@@ -15,13 +15,14 @@ export function ResultView({
   onNewScene,
   onOpenEditor,
 }: ResultViewProps) {
-  const hasImage = Boolean(generateData.image_url);
+  const imageUrl = generateData.image_url ?? undefined;
+  const hasImage = Boolean(imageUrl);
 
   return (
     <section className="result-stage">
       <div className="result-hero">
         {hasImage ? (
-          <img alt={decomposeData.concrete_description} src={generateData.image_url} />
+          <img alt={decomposeData.concrete_description} src={imageUrl} />
         ) : (
           <div aria-hidden="true" className="result-hero-placeholder" />
         )}

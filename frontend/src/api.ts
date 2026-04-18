@@ -10,21 +10,7 @@ const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve,
 
 async function postJson<TResponse>(path: string, body: unknown): Promise<TResponse> {
   const requestUrl = `${apiBaseUrl}${path}`;
-  // #region agent log
-  fetch("http://127.0.0.1:7919/ingest/f36bc7cd-3af6-4165-9381-ffa5cd4add12", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ac51e2" },
-    body: JSON.stringify({
-      sessionId: "ac51e2",
-      runId: "pre-fix",
-      hypothesisId: "H1",
-      location: "frontend/src/api.ts:postJson:beforeFetch",
-      message: "About to send POST request",
-      data: { path, requestUrl, apiBaseUrl, hasBody: body != null },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
+
   let response: Response;
   try {
     response = await fetch(requestUrl, {
@@ -33,39 +19,11 @@ async function postJson<TResponse>(path: string, body: unknown): Promise<TRespon
       body: JSON.stringify(body),
     });
   } catch (error) {
-    const err = error as Error;
-    // #region agent log
-    fetch("http://127.0.0.1:7919/ingest/f36bc7cd-3af6-4165-9381-ffa5cd4add12", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ac51e2" },
-      body: JSON.stringify({
-        sessionId: "ac51e2",
-        runId: "pre-fix",
-        hypothesisId: "H2",
-        location: "frontend/src/api.ts:postJson:fetchError",
-        message: "Fetch threw before receiving HTTP response",
-        data: { path, requestUrl, errorName: err?.name, errorMessage: err?.message },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    throw error;
+    throw new Error(
+      `Could not reach the backend at ${requestUrl}. Make sure FastAPI is running on port 8000.`,
+      { cause: error },
+    );
   }
-  // #region agent log
-  fetch("http://127.0.0.1:7919/ingest/f36bc7cd-3af6-4165-9381-ffa5cd4add12", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ac51e2" },
-    body: JSON.stringify({
-      sessionId: "ac51e2",
-      runId: "pre-fix",
-      hypothesisId: "H3",
-      location: "frontend/src/api.ts:postJson:afterFetch",
-      message: "Fetch resolved with HTTP response",
-      data: { path, requestUrl, status: response.status, ok: response.ok },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   if (!response.ok) {
     const text = await response.text();
@@ -76,21 +34,6 @@ async function postJson<TResponse>(path: string, body: unknown): Promise<TRespon
 }
 
 export async function decomposePrompt(prompt: string): Promise<DecomposeResponse> {
-  // #region agent log
-  fetch("http://127.0.0.1:7919/ingest/f36bc7cd-3af6-4165-9381-ffa5cd4add12", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ac51e2" },
-    body: JSON.stringify({
-      sessionId: "ac51e2",
-      runId: "pre-fix",
-      hypothesisId: "H4",
-      location: "frontend/src/api.ts:decomposePrompt:entry",
-      message: "decomposePrompt invoked",
-      data: { useMocks, promptLength: prompt.length, promptPreview: prompt.slice(0, 40) },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   if (useMocks) {
     await wait(700);
     return prompt.toLowerCase().includes("peace")

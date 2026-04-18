@@ -2,11 +2,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, status
-from pydub import AudioSegment
+from fastapi import APIRouter, HTTPException, Request, status
 
 from ..config import get_settings
-from .elevenlabs import generate_all_sounds
+from .elevenlabs import ElevenLabsGenerationError, generate_all_sounds
 from .schemas import (
     GenerateElementResponse,
     GenerateRequest,
@@ -14,10 +13,12 @@ from .schemas import (
     JobStatusResponse,
 )
 from .spatial_dsp import (
+    AudioTrack,
     apply_spatial,
+    audio_bytes_to_audio_track,
     enforce_duration,
+    export_wav,
     mix_all,
-    mp3_bytes_to_audio_segment,
     normalize_for_mix,
 )
 
@@ -44,13 +45,13 @@ def _ensure_output_dir() -> Path:
     return output_dir
 
 
-def _static_url(path: Path) -> str:
-    return f"/static/outputs/{path.name}"
+def _static_url(request: Request, path: Path) -> str:
+    return str(request.url_for("static-outputs", path=path.name))
 
 
 @router.post("/generate", response_model=GenerateResponse, status_code=status.HTTP_200_OK)
-async def generate_scene(payload: GenerateRequest) -> GenerateResponse:
-    if not settings.elevenlabs_api_key:
+async def generate_scene(payload: GenerateRequest, request: Request) -> GenerateResponse:
+    if not settings.elevenlabs_api_key or settings.elevenlabs_api_key.startswith("your_"):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="ELEVENLABS_API_KEY is not configured",
@@ -65,24 +66,30 @@ async def generate_scene(payload: GenerateRequest) -> GenerateResponse:
 
     try:
         sound_prompts = [element.sound_prompt for element in payload.elements]
-        mp3_results = await generate_all_sounds(
+        audio_results = await generate_all_sounds(
             api_key=settings.elevenlabs_api_key,
             sound_prompts=sound_prompts,
             duration_seconds=duration,
+            model_id=settings.elevenlabs_model_id,
+            output_format=settings.elevenlabs_output_format,
+            prompt_influence=settings.elevenlabs_prompt_influence,
         )
 
-        processed_tracks: list[AudioSegment] = []
+        processed_tracks: list[AudioTrack] = []
         element_responses: list[GenerateElementResponse] = []
 
         for index, element in enumerate(payload.elements):
-            audio = mp3_bytes_to_audio_segment(mp3_results[index])
+            audio = audio_bytes_to_audio_track(
+                audio_results[index],
+                settings.elevenlabs_output_format,
+            )
             audio = enforce_duration(audio, duration)
             audio = normalize_for_mix(audio, settings.mix_sample_rate, settings.mix_channels)
             processed = apply_spatial(audio, element.x, element.y, element.reverb)
             processed_tracks.append(processed)
 
             elem_file = output_dir / f"{element.id}_{job_id}.wav"
-            processed.export(elem_file, format="wav")
+            export_wav(processed, elem_file)
             element_responses.append(
                 GenerateElementResponse(
                     id=element.id,
@@ -90,16 +97,16 @@ async def generate_scene(payload: GenerateRequest) -> GenerateResponse:
                     x=element.x,
                     y=element.y,
                     reverb=element.reverb,
-                    individual_audio_url=_static_url(elem_file),
+                    individual_audio_url=_static_url(request, elem_file),
                 )
             )
             job_state.completed_elements.append(element.id)
 
         mixed = mix_all(processed_tracks, duration_seconds=duration, sample_rate=settings.mix_sample_rate)
         mixed_file = output_dir / f"{scene_stem}.wav"
-        mixed.export(mixed_file, format="wav")
+        export_wav(mixed, mixed_file)
 
-        audio_url = _static_url(mixed_file)
+        audio_url = _static_url(request, mixed_file)
         job_state.status = "completed"
         job_state.audio_url = audio_url
         job_state.image_url = None
@@ -111,10 +118,20 @@ async def generate_scene(payload: GenerateRequest) -> GenerateResponse:
             elements=element_responses,
             duration_seconds=duration,
         )
+    except ElevenLabsGenerationError as exc:
+        job_state.status = "failed"
+        job_state.error = str(exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
     except Exception as exc:
         job_state.status = "failed"
         job_state.error = str(exc)
-        raise
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Audio generation failed: {exc}",
+        ) from exc
 
 
 @router.get("/status/{job_id}", response_model=JobStatusResponse, status_code=status.HTTP_200_OK)

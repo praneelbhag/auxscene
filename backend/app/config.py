@@ -28,10 +28,19 @@ class Settings(BaseSettings):
         alias="ENABLE_GOOGLE_SEARCH_GROUNDING",
     )
     gemini_image_aspect_ratio: str = Field(default="16:9", alias="GEMINI_IMAGE_ASPECT_RATIO")
+    elevenlabs_model_id: str = Field(
+        default="eleven_text_to_sound_v2",
+        alias="ELEVENLABS_MODEL_ID",
+    )
+    elevenlabs_output_format: str = Field(default="pcm_24000", alias="ELEVENLABS_OUTPUT_FORMAT")
+    elevenlabs_prompt_influence: float = Field(default=0.3, alias="ELEVENLABS_PROMPT_INFLUENCE")
 
     backend_host: str = Field(default="127.0.0.1", alias="BACKEND_HOST")
     backend_port: int = Field(default=8000, alias="BACKEND_PORT")
-    cors_origins: str = Field(default="http://localhost:5173", alias="CORS_ORIGINS")
+    cors_origins: str = Field(
+        default="http://localhost:5173,http://127.0.0.1:5173",
+        alias="CORS_ORIGINS",
+    )
     output_dir: Path = Field(
         default=ROOT_DIR / "backend" / "static" / "outputs",
         alias="OUTPUT_DIR",

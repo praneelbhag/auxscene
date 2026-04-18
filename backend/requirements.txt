@@ -15,7 +15,6 @@ elevenlabs>=1.9.0
 numpy>=2.0.0
 scipy>=1.14.0
 soundfile>=0.12.1
-pydub>=0.25.1
 pedalboard>=0.9.16
 pillow>=10.4.0
 

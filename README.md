@@ -26,7 +26,7 @@ pip install -r backend/requirements.txt
 uvicorn backend.app.main:app --reload
 ```
 
-Audio export through `pydub` also needs FFmpeg available on your PATH.
+Audio export writes WAV files directly from PCM, so FFmpeg is not required for the default ElevenLabs output format.
 
 ### Frontend Dependencies
 
@@ -57,6 +57,6 @@ The response includes `original_prompt`, `is_abstract`, `grounding_sources`, `co
 | Abstract detection and scene decomposition | `google-genai` | `GEMINI_API_KEY`, `GEMINI_MODEL` |
 | Web search grounding | Gemini Google Search grounding | `GEMINI_API_KEY`, `ENABLE_GOOGLE_SEARCH_GROUNDING` |
 | Sound effect generation | `elevenlabs` | `ELEVENLABS_API_KEY` |
-| Spatial DSP and export | `pedalboard`, `pydub`, `soundfile`, `numpy`, `scipy` | `MIX_SAMPLE_RATE`, `MIX_CHANNELS` |
+| Spatial DSP and export | `pedalboard`, `numpy`, `scipy`, built-in WAV export | `MIX_SAMPLE_RATE`, `MIX_CHANNELS` |
 | Image generation | Gemini native image generation, Nano Banana Pro | `GEMINI_API_KEY`, `GEMINI_IMAGE_MODEL`, `GEMINI_IMAGE_ASPECT_RATIO` |
 | Spatial editor | React, Web Audio API, WaveSurfer | `VITE_API_BASE_URL` |
