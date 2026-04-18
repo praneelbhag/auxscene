@@ -38,6 +38,18 @@ npm run dev
 
 The frontend reads `VITE_API_BASE_URL` from the root `.env` file and defaults to `http://localhost:8000`.
 
+## Decomposition Endpoint
+
+`POST /api/decompose` turns a raw prompt into the shared SoundScene element contract.
+
+```powershell
+curl -X POST http://localhost:8000/api/decompose `
+  -H "Content-Type: application/json" `
+  -d '{"prompt": "peace and serenity"}'
+```
+
+The response includes `original_prompt`, `is_abstract`, `grounding_sources`, `concrete_description`, and 3-6 spatial `elements`. Abstract prompts use Gemini with Google Search grounding before decomposition; concrete prompts skip grounding and decompose directly.
+
 ## Provider Map
 
 | Feature | Dependency | Env |
