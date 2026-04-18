@@ -15,10 +15,16 @@ export function ResultView({
   onNewScene,
   onOpenEditor,
 }: ResultViewProps) {
+  const hasImage = Boolean(generateData.image_url);
+
   return (
     <section className="result-stage">
       <div className="result-hero">
-        <img alt={decomposeData.concrete_description} src={generateData.image_url} />
+        {hasImage ? (
+          <img alt={decomposeData.concrete_description} src={generateData.image_url} />
+        ) : (
+          <div aria-hidden="true" className="result-hero-placeholder" />
+        )}
         <div className="result-copy">
           <p className="eyebrow">Generated Scene</p>
           <h1>{decomposeData.original_prompt}</h1>

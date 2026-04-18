@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import uuid4
@@ -8,7 +7,6 @@ from pydub import AudioSegment
 
 from ..config import get_settings
 from .elevenlabs import generate_all_sounds
-from .image_gen import generate_image
 from .schemas import (
     GenerateElementResponse,
     GenerateRequest,
@@ -67,15 +65,11 @@ async def generate_scene(payload: GenerateRequest) -> GenerateResponse:
 
     try:
         sound_prompts = [element.sound_prompt for element in payload.elements]
-        audio_task = asyncio.create_task(
-            generate_all_sounds(
-                api_key=settings.elevenlabs_api_key,
-                sound_prompts=sound_prompts,
-                duration_seconds=duration,
-            )
+        mp3_results = await generate_all_sounds(
+            api_key=settings.elevenlabs_api_key,
+            sound_prompts=sound_prompts,
+            duration_seconds=duration,
         )
-        image_task = asyncio.create_task(generate_image(payload.concrete_description, output_dir, job_id))
-        mp3_results, image_path = await asyncio.gather(audio_task, image_task)
 
         processed_tracks: list[AudioSegment] = []
         element_responses: list[GenerateElementResponse] = []
@@ -106,15 +100,14 @@ async def generate_scene(payload: GenerateRequest) -> GenerateResponse:
         mixed.export(mixed_file, format="wav")
 
         audio_url = _static_url(mixed_file)
-        image_url = _static_url(image_path)
         job_state.status = "completed"
         job_state.audio_url = audio_url
-        job_state.image_url = image_url
+        job_state.image_url = None
 
         return GenerateResponse(
             job_id=job_id,
             audio_url=audio_url,
-            image_url=image_url,
+            image_url=None,
             elements=element_responses,
             duration_seconds=duration,
         )

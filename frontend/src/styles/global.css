@@ -504,6 +504,15 @@ h2 {
   animation: image-in 800ms ease both;
 }
 
+.result-hero-placeholder {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(123, 223, 255, 0.22), transparent 52%),
+    radial-gradient(circle at 82% 28%, rgba(244, 183, 71, 0.22), transparent 48%),
+    linear-gradient(135deg, #121620, #1b2130);
+}
+
 .result-hero::after {
   position: absolute;
   inset: 0;

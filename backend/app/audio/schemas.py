@@ -32,7 +32,7 @@ class GenerateElementResponse(BaseModel):
 class GenerateResponse(BaseModel):
     job_id: str
     audio_url: str
-    image_url: str
+    image_url: str | None = None
     elements: list[GenerateElementResponse]
     duration_seconds: float
 

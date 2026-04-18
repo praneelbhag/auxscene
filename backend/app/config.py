@@ -17,8 +17,6 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     elevenlabs_api_key: str = Field(default="", alias="ELEVENLABS_API_KEY")
-    replicate_api_token: str = Field(default="", alias="REPLICATE_API_TOKEN")
-
     gemini_model: str = Field(default="gemini-3.1-pro-preview", alias="GEMINI_MODEL")
     gemini_image_model: str = Field(
         default="gemini-3-pro-image-preview",
@@ -52,7 +50,6 @@ class Settings(BaseSettings):
         required_keys = {
             "GEMINI_API_KEY": self.gemini_api_key,
             "ELEVENLABS_API_KEY": self.elevenlabs_api_key,
-            "REPLICATE_API_TOKEN": self.replicate_api_token,
         }
 
         return [

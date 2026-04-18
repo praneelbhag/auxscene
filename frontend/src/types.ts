@@ -21,7 +21,7 @@ export type DecomposeResponse = {
 
 export type GenerateResponse = {
   audio_url: string;
-  image_url: string;
+  image_url?: string | null;
   elements: SoundElement[];
   duration_seconds?: number;
 };
