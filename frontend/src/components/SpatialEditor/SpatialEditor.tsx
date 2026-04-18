@@ -13,6 +13,7 @@ import {
   updateElementVolume,
 } from "./AudioEngine";
 import { SpatialMap } from "./SpatialMap";
+import type { Layer } from "../../types";
 import "./SpatialEditor.css";
 
 const COLORS = [
@@ -41,6 +42,23 @@ export interface SpatialElement {
   y: number;
   reverb: number;
   individual_audio_url: string;
+  sound_prompt?: string;
+  layer?: Layer;
+  generation?: {
+    loop?: boolean;
+    duration_seconds?: number | null;
+    prompt_influence?: number | null;
+  };
+  reviewer_notes?: string[];
+  cache_key_hint?: string | null;
+  cache_hit?: boolean;
+  cache_similarity?: number | null;
+  audio_review?: {
+    score?: number | null;
+    description?: string | null;
+    issues?: string[];
+    suggested_prompt?: string | null;
+  } | null;
 }
 
 interface InternalElement extends SpatialElement {
@@ -49,11 +67,13 @@ interface InternalElement extends SpatialElement {
   solo: boolean;
   volumeOverride: number;
   isPlaying: boolean;
+  isRegenerating: boolean;
 }
 
 interface SpatialEditorProps {
   elements: SpatialElement[];
   onSave?: (elements: SpatialElement[]) => void;
+  onRegenerate?: (element: SpatialElement, editInstruction: string) => Promise<SpatialElement>;
 }
 
 function makeInternalElements(elements: SpatialElement[]): InternalElement[] {
@@ -64,14 +84,19 @@ function makeInternalElements(elements: SpatialElement[]): InternalElement[] {
     solo: false,
     volumeOverride: 1,
     isPlaying: false,
+    isRegenerating: false,
   }));
 }
 
 function toSpatialElements(elements: InternalElement[]): SpatialElement[] {
-  return elements.map(({ color, muted, solo, volumeOverride, isPlaying, ...element }) => element);
+  return elements.map(({ color, muted, solo, volumeOverride, isPlaying, isRegenerating, ...element }) => element);
 }
 
-export default function SpatialEditor({ elements: initialElements, onSave }: SpatialEditorProps) {
+export default function SpatialEditor({
+  elements: initialElements,
+  onRegenerate,
+  onSave,
+}: SpatialEditorProps) {
   const [elements, setElements] = useState<InternalElement[]>(() =>
     makeInternalElements(initialElements),
   );
@@ -314,6 +339,54 @@ export default function SpatialEditor({ elements: initialElements, onSave }: Spa
     setSaveMessage("Mix saved");
   };
 
+  const handleRegenerate = async (id: string, editInstruction: string) => {
+    if (!onRegenerate) return;
+
+    const element = elementsRef.current.find((item) => item.id === id);
+    if (!element) return;
+
+    setLoadError(null);
+    setElements((current) =>
+      current.map((item) => (item.id === id ? { ...item, isRegenerating: true } : item)),
+    );
+
+    try {
+      const nextElement = await onRegenerate(toSpatialElements([element])[0], editInstruction);
+      const wasPlaying = Boolean(audioNodesRef.current[id] && !audioNodesRef.current[id].audio.paused);
+
+      if (audioNodesRef.current[id]) {
+        teardownElement(audioNodesRef.current[id]);
+        delete audioNodesRef.current[id];
+      }
+
+      setElements((current) =>
+        current.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                ...nextElement,
+                isPlaying: false,
+                isRegenerating: false,
+              }
+            : item,
+        ),
+      );
+
+      if (wasPlaying) {
+        window.setTimeout(() => {
+          void handleElementPlayToggle(id);
+        }, 0);
+      }
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : `Could not regenerate ${element.label}`,
+      );
+      setElements((current) =>
+        current.map((item) => (item.id === id ? { ...item, isRegenerating: false } : item)),
+      );
+    }
+  };
+
   const handleTimelineChange = (nextTime: number) => {
     setTimelineTime(nextTime);
     timelineTimeRef.current = nextTime;
@@ -331,6 +404,7 @@ export default function SpatialEditor({ elements: initialElements, onSave }: Spa
           onMuteToggle={handleMuteToggle}
           onSoloToggle={handleSoloToggle}
           onPlayToggle={handleElementPlayToggle}
+          onRegenerate={handleRegenerate}
           headphoneMode={headphoneMode}
           onHeadphoneToggle={() => setHeadphoneMode((value) => !value)}
         />

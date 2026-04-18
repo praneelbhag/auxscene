@@ -1,7 +1,7 @@
 import abstractMock from "./mocks/abstractDecomposeResponse.json";
 import decomposeMock from "./mocks/decomposeResponse.json";
 import generateMock from "./mocks/generateResponse.json";
-import type { DecomposeResponse, GenerateResponse } from "./types";
+import type { DecomposeResponse, GenerateResponse, RegenerateElementResponse, SoundElement } from "./types";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 const useMocks = import.meta.env.VITE_USE_MOCKS === "true";
@@ -61,4 +61,31 @@ export async function generateScene(
   }
 
   return postJson<GenerateResponse>("/api/generate", decomposeData);
+}
+
+export async function regenerateElement(
+  element: SoundElement,
+  editInstruction: string,
+  context?: Pick<DecomposeResponse, "original_prompt" | "concrete_description">,
+): Promise<RegenerateElementResponse> {
+  if (useMocks) {
+    await wait(900);
+    return {
+      element: {
+        ...element,
+        sound_prompt: `${element.sound_prompt ?? element.label}. User refinement: ${editInstruction}`,
+        reviewer_notes: [
+          ...(element.reviewer_notes ?? []),
+          `Mock refinement applied: ${editInstruction}`,
+        ],
+      },
+    };
+  }
+
+  return postJson<RegenerateElementResponse>("/api/regenerate-element", {
+    element,
+    edit_instruction: editInstruction,
+    original_prompt: context?.original_prompt,
+    concrete_description: context?.concrete_description,
+  });
 }

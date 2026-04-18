@@ -39,4 +39,7 @@ async def health_check() -> dict[str, object]:
         "googleSearchGroundingEnabled": settings.enable_google_search_grounding,
         "imageModel": settings.gemini_image_model,
         "imageAspectRatio": settings.gemini_image_aspect_ratio,
+        "audioCacheEnabled": settings.audio_cache_enabled,
+        "audioReviewEnabled": settings.audio_review_enabled,
+        "audioReviewAutoRetry": settings.audio_review_auto_retry,
     }

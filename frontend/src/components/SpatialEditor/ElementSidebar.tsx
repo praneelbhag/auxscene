@@ -1,4 +1,4 @@
-import React from "react";
+import { useState } from "react";
 
 interface SidebarElement {
   id: string;
@@ -9,6 +9,17 @@ interface SidebarElement {
   muted: boolean;
   solo: boolean;
   isPlaying: boolean;
+  isRegenerating: boolean;
+  sound_prompt?: string;
+  cache_hit?: boolean;
+  cache_similarity?: number | null;
+  reviewer_notes?: string[];
+  audio_review?: {
+    score?: number | null;
+    description?: string | null;
+    issues?: string[];
+    suggested_prompt?: string | null;
+  } | null;
 }
 
 interface ElementSidebarProps {
@@ -18,6 +29,7 @@ interface ElementSidebarProps {
   onMuteToggle: (id: string) => void;
   onSoloToggle: (id: string) => void;
   onPlayToggle: (id: string) => void;
+  onRegenerate: (id: string, editInstruction: string) => void;
   headphoneMode: boolean;
   onHeadphoneToggle: () => void;
 }
@@ -29,9 +41,12 @@ export function ElementSidebar({
   onMuteToggle,
   onSoloToggle,
   onPlayToggle,
+  onRegenerate,
   headphoneMode,
   onHeadphoneToggle,
 }: ElementSidebarProps) {
+  const [edits, setEdits] = useState<Record<string, string>>({});
+
   return (
     <div className="element-sidebar">
       {elements.map((el) => (
@@ -40,6 +55,25 @@ export function ElementSidebar({
             <span className="sidebar-dot" style={{ background: el.color }} />
             <span className="sidebar-label">{el.label}</span>
           </div>
+
+          {el.sound_prompt && <p className="sound-prompt-text">{el.sound_prompt}</p>}
+
+          <div className="quality-meta">
+            {el.cache_hit && (
+              <span>
+                Cache hit{el.cache_similarity ? ` ${(el.cache_similarity * 100).toFixed(0)}%` : ""}
+              </span>
+            )}
+            {el.audio_review?.score != null && (
+              <span>Review {(el.audio_review.score * 100).toFixed(0)}%</span>
+            )}
+          </div>
+
+          {el.audio_review?.issues?.length ? (
+            <p className="review-note">{el.audio_review.issues[0]}</p>
+          ) : el.reviewer_notes?.length ? (
+            <p className="review-note">{el.reviewer_notes[0]}</p>
+          ) : null}
 
           <label className="slider-label">
             Reverb
@@ -90,6 +124,25 @@ export function ElementSidebar({
               Mute
             </button>
           </div>
+
+          <label className="edit-label">
+            Refine
+            <textarea
+              placeholder="heavier rain, less birds, more distant..."
+              value={edits[el.id] ?? ""}
+              onChange={(event) =>
+                setEdits((current) => ({ ...current, [el.id]: event.target.value }))
+              }
+            />
+          </label>
+          <button
+            className="regenerate-btn"
+            disabled={el.isRegenerating || !(edits[el.id] ?? "").trim()}
+            onClick={() => onRegenerate(el.id, (edits[el.id] ?? "").trim())}
+            type="button"
+          >
+            {el.isRegenerating ? "Regenerating..." : "Regenerate Sound"}
+          </button>
         </div>
       ))}
 
@@ -98,7 +151,7 @@ export function ElementSidebar({
         onClick={onHeadphoneToggle}
         type="button"
       >
-        🎧 {headphoneMode ? "Headphone Mode On" : "Headphone Mode"}
+        {headphoneMode ? "Headphone Mode On" : "Headphone Mode"}
       </button>
       {headphoneMode && (
         <p className="headphone-reminder">

@@ -1,5 +1,5 @@
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
-import { decomposePrompt, generateScene } from "./api";
+import { decomposePrompt, generateScene, regenerateElement } from "./api";
 import { ProcessingView } from "./components/ProcessingView";
 import { ResultView } from "./components/ResultView";
 import { SceneInput } from "./components/SceneInput";
@@ -34,6 +34,14 @@ export default function App() {
       y: element.y,
       reverb: element.reverb,
       individual_audio_url: element.individual_audio_url ?? generateData.audio_url,
+      sound_prompt: element.sound_prompt,
+      layer: element.layer,
+      generation: element.generation,
+      reviewer_notes: element.reviewer_notes,
+      cache_key_hint: element.cache_key_hint,
+      cache_hit: element.cache_hit,
+      cache_similarity: element.cache_similarity,
+      audio_review: element.audio_review,
     }));
   }, [generateData]);
 
@@ -57,6 +65,27 @@ export default function App() {
         }),
       };
     });
+  };
+
+  const handleEditorRegenerate = async (
+    element: SpatialElement,
+    editInstruction: string,
+  ): Promise<SpatialElement> => {
+    const regenerated = await regenerateElement(element, editInstruction, decomposeData ?? undefined);
+    const nextElement = regenerated.element as SpatialElement;
+
+    setGenerateData((current) => {
+      if (!current) return current;
+
+      return {
+        ...current,
+        elements: current.elements.map((item) =>
+          item.id === nextElement.id ? { ...item, ...nextElement } : item,
+        ),
+      };
+    });
+
+    return nextElement;
   };
 
   useEffect(() => {
@@ -170,7 +199,11 @@ export default function App() {
               Back to Result
             </button>
           </div>
-          <SpatialEditor elements={editorElements} onSave={handleEditorSave} />
+          <SpatialEditor
+            elements={editorElements}
+            onRegenerate={handleEditorRegenerate}
+            onSave={handleEditorSave}
+          />
         </section>
       )}
     </main>

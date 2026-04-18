@@ -14,6 +14,19 @@ class AudioTrack:
     sample_rate: int
 
 
+LAYER_TARGET_RMS_DBFS = {
+    "foreground": -21.0,
+    "midground": -25.0,
+    "background": -29.0,
+}
+
+LAYER_SCENE_GAIN = {
+    "foreground": 0.85,
+    "midground": 0.62,
+    "background": 0.44,
+}
+
+
 def audio_bytes_to_audio_track(audio_bytes: bytes, output_format: str) -> AudioTrack:
     if output_format.startswith("pcm_"):
         sample_rate = int(output_format.split("_", maxsplit=1)[1])
@@ -58,6 +71,20 @@ def normalize_for_mix(audio: AudioTrack, sample_rate: int, channels: int) -> Aud
     return AudioTrack(samples=samples.astype(np.float32), sample_rate=sample_rate)
 
 
+def condition_for_natural_mix(audio: AudioTrack, layer: str | None) -> AudioTrack:
+    layer_key = str(layer or "midground").lower()
+    target_rms = _db_to_amplitude(LAYER_TARGET_RMS_DBFS.get(layer_key, -25.0))
+    scene_gain = LAYER_SCENE_GAIN.get(layer_key, 0.62)
+
+    samples = np.nan_to_num(audio.samples.copy(), copy=False)
+    samples = _apply_short_fades(samples, audio.sample_rate)
+    samples = _reduce_if_louder_than_rms(samples, target_rms)
+    samples *= scene_gain
+    samples = _cap_peak(samples, peak=0.86)
+
+    return AudioTrack(samples=samples.astype(np.float32), sample_rate=audio.sample_rate)
+
+
 def apply_spatial(audio: AudioTrack, x: float, y: float, reverb_amount: float) -> AudioTrack:
     attenuation = 10 ** ((-y * 20.0) / 20.0)
     samples = audio.samples * attenuation
@@ -98,9 +125,9 @@ def mix_all(processed_tracks: list[AudioTrack], duration_seconds: float, sample_
             samples = np.pad(samples, ((0, 0), (0, target_samples - samples.shape[1])), mode="constant")
         mix += samples
 
-    peak = float(np.max(np.abs(mix))) if mix.size else 0.0
-    if peak > 1.0:
-        mix /= peak
+    mix = _reduce_if_louder_than_rms(mix, _db_to_amplitude(-20.0))
+    mix = _cap_peak(mix, peak=0.92)
+    mix = _soft_limit(mix)
 
     return AudioTrack(samples=np.clip(mix, -1.0, 1.0), sample_rate=sample_rate)
 
@@ -114,3 +141,40 @@ def export_wav(audio: AudioTrack, path: Path) -> None:
         wav_file.setsampwidth(2)
         wav_file.setframerate(audio.sample_rate)
         wav_file.writeframes(pcm.tobytes())
+
+
+def _db_to_amplitude(dbfs: float) -> float:
+    return 10 ** (dbfs / 20.0)
+
+
+def _rms(samples: np.ndarray) -> float:
+    return float(np.sqrt(np.mean(np.square(samples)))) if samples.size else 0.0
+
+
+def _reduce_if_louder_than_rms(samples: np.ndarray, target_rms: float) -> np.ndarray:
+    current_rms = _rms(samples)
+    if current_rms <= target_rms or current_rms <= 1e-6:
+        return samples
+    return samples * (target_rms / current_rms)
+
+
+def _cap_peak(samples: np.ndarray, *, peak: float) -> np.ndarray:
+    current_peak = float(np.max(np.abs(samples))) if samples.size else 0.0
+    if current_peak <= peak or current_peak <= 1e-6:
+        return samples
+    return samples * (peak / current_peak)
+
+
+def _apply_short_fades(samples: np.ndarray, sample_rate: int, fade_ms: float = 35.0) -> np.ndarray:
+    fade_samples = min(samples.shape[1] // 2, max(1, int(sample_rate * fade_ms / 1000.0)))
+    if fade_samples <= 1:
+        return samples
+
+    curve = np.linspace(0.0, 1.0, fade_samples, dtype=np.float32)
+    samples[:, :fade_samples] *= curve
+    samples[:, -fade_samples:] *= curve[::-1]
+    return samples
+
+
+def _soft_limit(samples: np.ndarray, drive: float = 1.35) -> np.ndarray:
+    return np.tanh(samples * drive) / np.tanh(drive)

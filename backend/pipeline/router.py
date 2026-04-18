@@ -7,6 +7,7 @@ from backend.app.config import get_settings
 from .classifier import classify_prompt
 from .decomposer import decompose_scene
 from .grounding import ground_abstract_prompt
+from .prompt_refiner import refine_sound_prompts
 from .schemas import DecomposeRequest, DecomposeResponse
 
 router = APIRouter(prefix="/api", tags=["pipeline"])
@@ -33,6 +34,13 @@ async def decompose(request: DecomposeRequest) -> DecomposeResponse:
             concrete_description,
             settings,
         )
+        refined_elements = await asyncio.to_thread(
+            refine_sound_prompts,
+            original_prompt=prompt,
+            concrete_description=decomposition.concrete_description,
+            elements=decomposition.elements,
+            settings=settings,
+        )
     except RuntimeError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -49,5 +57,5 @@ async def decompose(request: DecomposeRequest) -> DecomposeResponse:
         is_abstract=is_abstract,
         grounding_sources=grounding_sources,
         concrete_description=decomposition.concrete_description,
-        elements=decomposition.elements,
+        elements=refined_elements,
     )

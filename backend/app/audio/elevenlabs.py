@@ -19,6 +19,7 @@ async def generate_sound(
     model_id: str,
     output_format: str,
     prompt_influence: float,
+    loop: bool,
     client: httpx.AsyncClient,
 ) -> bytes:
     try:
@@ -31,6 +32,7 @@ async def generate_sound(
                 "duration_seconds": duration_seconds,
                 "prompt_influence": prompt_influence,
                 "model_id": model_id,
+                "loop": loop,
             },
             timeout=120.0,
         )
@@ -54,6 +56,7 @@ async def generate_all_sounds(
     model_id: str,
     output_format: str,
     prompt_influence: float,
+    loop: bool = False,
 ) -> list[bytes]:
     async with httpx.AsyncClient() as client:
         tasks = [
@@ -64,6 +67,7 @@ async def generate_all_sounds(
                 model_id=model_id,
                 output_format=output_format,
                 prompt_influence=prompt_influence,
+                loop=loop,
                 client=client,
             )
             for sound_prompt in sound_prompts

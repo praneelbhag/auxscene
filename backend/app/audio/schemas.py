@@ -3,6 +3,19 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+class GenerationSettings(BaseModel):
+    loop: bool = False
+    duration_seconds: float | None = Field(default=None, ge=0.5, le=30.0)
+    prompt_influence: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class AudioReview(BaseModel):
+    score: float | None = Field(default=None, ge=0.0, le=1.0)
+    description: str | None = None
+    issues: list[str] = Field(default_factory=list)
+    suggested_prompt: str | None = None
+
+
 class SceneElement(BaseModel):
     id: str
     sound_prompt: str
@@ -11,6 +24,9 @@ class SceneElement(BaseModel):
     y: float = Field(ge=0.0, le=1.0)
     reverb: float = Field(ge=0.0, le=1.0)
     layer: Literal["background", "midground", "foreground"] | str = "midground"
+    generation: GenerationSettings = Field(default_factory=GenerationSettings)
+    reviewer_notes: list[str] = Field(default_factory=list)
+    cache_key_hint: str | None = None
 
 
 class GenerateRequest(BaseModel):
@@ -23,9 +39,17 @@ class GenerateRequest(BaseModel):
 class GenerateElementResponse(BaseModel):
     id: str
     label: str
+    sound_prompt: str | None = None
     x: float
     y: float
     reverb: float
+    layer: str | None = None
+    generation: GenerationSettings | None = None
+    reviewer_notes: list[str] = Field(default_factory=list)
+    cache_key_hint: str | None = None
+    cache_hit: bool = False
+    cache_similarity: float | None = None
+    audio_review: AudioReview | None = None
     individual_audio_url: str
 
 
@@ -35,6 +59,17 @@ class GenerateResponse(BaseModel):
     image_url: str | None = None
     elements: list[GenerateElementResponse]
     duration_seconds: float
+
+
+class RegenerateElementRequest(BaseModel):
+    element: SceneElement
+    edit_instruction: str | None = None
+    original_prompt: str | None = None
+    concrete_description: str | None = None
+
+
+class RegenerateElementResponse(BaseModel):
+    element: GenerateElementResponse
 
 
 class JobStatusResponse(BaseModel):
