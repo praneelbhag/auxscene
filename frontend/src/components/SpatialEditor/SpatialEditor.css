@@ -205,6 +205,12 @@
   color: #4f8ef7;
 }
 
+.element-play-btn.active {
+  background: #173525;
+  border-color: #4fc97e;
+  color: #4fc97e;
+}
+
 .mute-btn.active {
   background: #3a1a28;
   border-color: #f74f6a;
@@ -294,4 +300,15 @@
   border-radius: 8px;
   color: #f77090;
   font-size: 13px;
+}
+
+.save-btn {
+  background: #4fc97e;
+  color: #06140b;
+}
+
+.save-message {
+  color: #4fc97e;
+  font-size: 13px;
+  font-weight: 700;
 }

@@ -37,6 +37,28 @@ export default function App() {
     }));
   }, [generateData]);
 
+  const handleEditorSave = (nextElements: SpatialElement[]) => {
+    setGenerateData((current) => {
+      if (!current) return current;
+
+      return {
+        ...current,
+        elements: current.elements.map((element) => {
+          const edited = nextElements.find((item) => item.id === element.id);
+          return edited
+            ? {
+                ...element,
+                x: edited.x,
+                y: edited.y,
+                reverb: edited.reverb,
+                individual_audio_url: edited.individual_audio_url,
+              }
+            : element;
+        }),
+      };
+    });
+  };
+
   useEffect(() => {
     if (!decomposeData || phase !== "processing") return;
 
@@ -148,7 +170,7 @@ export default function App() {
               Back to Result
             </button>
           </div>
-          <SpatialEditor elements={editorElements} />
+          <SpatialEditor elements={editorElements} onSave={handleEditorSave} />
         </section>
       )}
     </main>

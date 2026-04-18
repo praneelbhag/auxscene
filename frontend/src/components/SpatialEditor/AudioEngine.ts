@@ -45,8 +45,15 @@ export async function setupElement(element: {
   individual_audio_url: string;
 }): Promise<AudioNodes> {
   const ctx = getAudioContext();
+  if (ctx.state === "suspended") {
+    await ctx.resume();
+  }
 
   const response = await fetch(element.individual_audio_url);
+  if (!response.ok) {
+    throw new Error(`Could not load ${element.individual_audio_url}`);
+  }
+
   const arrayBuffer = await response.arrayBuffer();
   const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
 
@@ -120,13 +127,21 @@ export function teardownElement(nodes: AudioNodes) {
   try {
     nodes.source.stop();
     nodes.source.disconnect();
+    nodes.gainNode.disconnect();
+    nodes.pannerNode.disconnect();
+    nodes.muteGain.disconnect();
+    nodes.dryGain.disconnect();
+    nodes.convolver.disconnect();
+    nodes.reverbGain.disconnect();
   } catch {
     // already stopped
   }
 }
 
-export function resumeAudioContext() {
-  if (audioContext && audioContext.state === "suspended") {
-    audioContext.resume();
+export async function resumeAudioContext() {
+  const ctx = getAudioContext();
+  if (ctx.state === "suspended") {
+    await ctx.resume();
   }
+  return ctx;
 }

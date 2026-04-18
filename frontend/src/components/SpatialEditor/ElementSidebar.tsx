@@ -8,6 +8,7 @@ interface SidebarElement {
   volumeOverride: number;
   muted: boolean;
   solo: boolean;
+  isPlaying: boolean;
 }
 
 interface ElementSidebarProps {
@@ -16,6 +17,7 @@ interface ElementSidebarProps {
   onVolumeChange: (id: string, value: number) => void;
   onMuteToggle: (id: string) => void;
   onSoloToggle: (id: string) => void;
+  onPlayToggle: (id: string) => void;
   headphoneMode: boolean;
   onHeadphoneToggle: () => void;
 }
@@ -26,6 +28,7 @@ export function ElementSidebar({
   onVolumeChange,
   onMuteToggle,
   onSoloToggle,
+  onPlayToggle,
   headphoneMode,
   onHeadphoneToggle,
 }: ElementSidebarProps) {
@@ -66,14 +69,23 @@ export function ElementSidebar({
 
           <div className="sidebar-toggles">
             <button
+              className={`toggle-btn element-play-btn${el.isPlaying ? " active" : ""}`}
+              onClick={() => onPlayToggle(el.id)}
+              type="button"
+            >
+              {el.isPlaying ? "Stop" : "Play"}
+            </button>
+            <button
               className={`toggle-btn solo-btn${el.solo ? " active" : ""}`}
               onClick={() => onSoloToggle(el.id)}
+              type="button"
             >
               Solo
             </button>
             <button
               className={`toggle-btn mute-btn${el.muted ? " active" : ""}`}
               onClick={() => onMuteToggle(el.id)}
+              type="button"
             >
               Mute
             </button>
@@ -84,6 +96,7 @@ export function ElementSidebar({
       <button
         className={`headphone-btn${headphoneMode ? " active" : ""}`}
         onClick={onHeadphoneToggle}
+        type="button"
       >
         🎧 {headphoneMode ? "Headphone Mode On" : "Headphone Mode"}
       </button>
