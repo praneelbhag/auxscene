@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from backend.pipeline.router import router as pipeline_router
 
+from .audio.router import router as audio_router
 from .config import get_settings
 
 settings = get_settings()
@@ -22,6 +24,9 @@ app.add_middleware(
 )
 
 app.include_router(pipeline_router)
+settings.output_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/static/outputs", StaticFiles(directory=settings.output_dir), name="static-outputs")
+app.include_router(audio_router)
 
 
 @app.get("/api/health")
