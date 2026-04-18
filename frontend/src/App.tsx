@@ -3,7 +3,9 @@ import { decomposePrompt, generateScene } from "./api";
 import { ProcessingView } from "./components/ProcessingView";
 import { ResultView } from "./components/ResultView";
 import { SceneInput } from "./components/SceneInput";
-import { SpatialEditor } from "./components/SpatialEditor";
+import SpatialEditor, {
+  type SpatialElement,
+} from "./components/SpatialEditor/SpatialEditor";
 import type {
   AppPhase,
   DecomposeResponse,
@@ -22,6 +24,18 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   const appClassName = useMemo(() => `app-shell phase-${phase}`, [phase]);
+  const editorElements = useMemo<SpatialElement[]>(() => {
+    if (!generateData) return [];
+
+    return generateData.elements.map((element) => ({
+      id: element.id,
+      label: element.label,
+      x: element.x,
+      y: element.y,
+      reverb: element.reverb,
+      individual_audio_url: element.individual_audio_url ?? generateData.audio_url,
+    }));
+  }, [generateData]);
 
   useEffect(() => {
     if (!decomposeData || phase !== "processing") return;
@@ -120,10 +134,22 @@ export default function App() {
       )}
 
       {phase === "editor" && generateData && (
-        <SpatialEditor
-          elements={generateData.elements}
-          onClose={() => setPhase("result")}
-        />
+        <section className="editor-stage">
+          <div className="editor-header">
+            <div>
+              <p className="eyebrow">Spatial Editor</p>
+              <h1>Fine tune the mix</h1>
+            </div>
+            <button
+              className="secondary-action"
+              onClick={() => setPhase("result")}
+              type="button"
+            >
+              Back to Result
+            </button>
+          </div>
+          <SpatialEditor elements={editorElements} />
+        </section>
       )}
     </main>
   );
