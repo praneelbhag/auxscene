@@ -1,0 +1,48 @@
+{
+  "original_prompt": "peace and serenity",
+  "is_abstract": true,
+  "grounding_sources": [
+    "Search: peaceful natural soundscapes associated with calm meditation",
+    "Grounding: slow water movement, soft wind through trees, distant birds, and low room tone commonly support serene scenes.",
+    "Search: audio cues for serenity in cinematic ambience"
+  ],
+  "concrete_description": "A quiet garden beside a still pond at dawn, with light wind, soft water movement, distant birds, and warm low ambience.",
+  "elements": [
+    {
+      "id": "elem_1",
+      "sound_prompt": "soft breeze through leaves",
+      "label": "Soft Breeze",
+      "x": -0.45,
+      "y": 0.7,
+      "reverb": 0.5,
+      "layer": "background"
+    },
+    {
+      "id": "elem_2",
+      "sound_prompt": "gentle pond water lapping",
+      "label": "Still Water",
+      "x": 0.15,
+      "y": 0.35,
+      "reverb": 0.25,
+      "layer": "midground"
+    },
+    {
+      "id": "elem_3",
+      "sound_prompt": "distant morning birds",
+      "label": "Morning Birds",
+      "x": 0.65,
+      "y": 0.85,
+      "reverb": 0.6,
+      "layer": "background"
+    },
+    {
+      "id": "elem_4",
+      "sound_prompt": "warm meditative room tone",
+      "label": "Warm Tone",
+      "x": 0,
+      "y": 0.1,
+      "reverb": 0.35,
+      "layer": "foreground"
+    }
+  ]
+}

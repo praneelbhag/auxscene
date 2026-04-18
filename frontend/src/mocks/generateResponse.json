@@ -1,0 +1,39 @@
+{
+  "audio_url": "https://actions.google.com/sounds/v1/weather/rain_on_roof.ogg",
+  "image_url": "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=1800&q=85",
+  "elements": [
+    {
+      "id": "elem_1",
+      "label": "Heavy Rain",
+      "x": 0,
+      "y": 0.8,
+      "reverb": 0.4,
+      "individual_audio_url": "https://actions.google.com/sounds/v1/weather/rain_on_roof.ogg"
+    },
+    {
+      "id": "elem_2",
+      "label": "Footsteps",
+      "x": -0.3,
+      "y": 0.15,
+      "reverb": 0.1,
+      "individual_audio_url": "https://actions.google.com/sounds/v1/foley/footsteps_on_concrete.ogg"
+    },
+    {
+      "id": "elem_3",
+      "label": "Car Pass",
+      "x": 0.6,
+      "y": 0.7,
+      "reverb": 0.5,
+      "individual_audio_url": "https://actions.google.com/sounds/v1/transportation/car_passing_by.ogg"
+    },
+    {
+      "id": "elem_4",
+      "label": "Neon Buzz",
+      "x": 0.8,
+      "y": 0.3,
+      "reverb": 0.2,
+      "individual_audio_url": "https://actions.google.com/sounds/v1/alarms/electrical_sweep.ogg"
+    }
+  ],
+  "duration_seconds": 10
+}

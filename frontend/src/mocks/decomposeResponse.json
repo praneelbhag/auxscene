@@ -1,0 +1,44 @@
+{
+  "original_prompt": "rainy Tokyo street at night",
+  "is_abstract": false,
+  "grounding_sources": [],
+  "concrete_description": "A rainy Tokyo street at night with neon reflections, wet pavement, passing cars, footsteps, and electric sign buzz.",
+  "elements": [
+    {
+      "id": "elem_1",
+      "sound_prompt": "heavy rain on pavement",
+      "label": "Heavy Rain",
+      "x": 0,
+      "y": 0.8,
+      "reverb": 0.4,
+      "layer": "background"
+    },
+    {
+      "id": "elem_2",
+      "sound_prompt": "footsteps on wet concrete",
+      "label": "Footsteps",
+      "x": -0.3,
+      "y": 0.15,
+      "reverb": 0.1,
+      "layer": "foreground"
+    },
+    {
+      "id": "elem_3",
+      "sound_prompt": "distant car on wet road",
+      "label": "Car Pass",
+      "x": 0.6,
+      "y": 0.7,
+      "reverb": 0.5,
+      "layer": "background"
+    },
+    {
+      "id": "elem_4",
+      "sound_prompt": "neon sign buzzing",
+      "label": "Neon Buzz",
+      "x": 0.8,
+      "y": 0.3,
+      "reverb": 0.2,
+      "layer": "midground"
+    }
+  ]
+}
