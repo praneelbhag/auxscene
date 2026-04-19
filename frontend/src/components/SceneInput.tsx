@@ -171,7 +171,7 @@ export function SceneInput({ disabled = false, onSubmit }: SceneInputProps) {
         <span />
         <span />
       </div>
-      <p className="eyebrow">SoundScene</p>
+      <p className="eyebrow">aux.scene</p>
       <h1 id="scene-input-title">Turn any scene into spatial audio.</h1>
       <p className="hero-sub">Use text, voice, or an image to shape a place, mood, or moment. We'll build the full 3D soundscape.</p>
       <form className="prompt-form" onSubmit={handleSubmit}>
