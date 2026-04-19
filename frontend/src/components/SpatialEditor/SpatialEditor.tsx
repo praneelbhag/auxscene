@@ -95,6 +95,7 @@ interface SpatialEditorProps {
   sceneDuration?: number;
   onSave?: (elements: SpatialElement[]) => void;
   onRegenerate?: (element: SpatialElement, editInstruction: string) => Promise<SpatialElement>;
+  onAddSound?: (prompt: string) => Promise<SpatialElement>;
 }
 
 function makeInternalElements(elements: SpatialElement[], sceneDuration: number): InternalElement[] {
@@ -130,6 +131,7 @@ export default function SpatialEditor({
   sceneDuration = 15,
   onRegenerate,
   onSave,
+  onAddSound,
 }: SpatialEditorProps) {
   const [elements, setElements] = useState<InternalElement[]>(() =>
     makeInternalElements(initialElements, sceneDuration),
@@ -137,6 +139,7 @@ export default function SpatialEditor({
   const [exportingStems, setExportingStems] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [headphoneMode, setHeadphoneMode] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [timelineTime, setTimelineTime] = useState(0);
   const [timelineDuration, setTimelineDuration] = useState(0);
@@ -482,6 +485,47 @@ export default function SpatialEditor({
     );
   }, []);
 
+  const handleDelete = useCallback((id: string) => {
+    if (audioNodesRef.current[id]) {
+      teardownElement(audioNodesRef.current[id]);
+      delete audioNodesRef.current[id];
+    }
+    setElements((current) => current.filter((el) => el.id !== id));
+  }, []);
+
+  const handleAddSoundPrompt = async (prompt: string) => {
+    if (!onAddSound) return;
+    setIsAdding(true);
+    setLoadError(null);
+    try {
+      const newElement = await onAddSound(prompt);
+      setElements((current) => {
+        const colorIndex = current.length % COLORS.length;
+        return [...current, {
+          ...newElement,
+          color: COLORS[colorIndex],
+          muted: false,
+          solo: false,
+          volumeOverride: 1,
+          isPlaying: false,
+          isRegenerating: false,
+          clipStart: newElement.mix?.start_seconds ?? 0,
+          clipEnd: sceneDuration,
+          fadeEnabled: false,
+          automationEnabled: false,
+          autoStart: newElement.mix?.start_seconds ?? 0,
+          autoEnd: sceneDuration,
+          endX: newElement.x,
+          endY: newElement.y,
+        }];
+      });
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Could not add sound");
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   const handleAutomationDrag = useCallback((id: string, newX: number, newY: number) => {
     setElements((current) => current.map((el) => el.id === id ? { ...el, endX: newX, endY: newY } : el));
   }, []);
@@ -528,6 +572,9 @@ export default function SpatialEditor({
           onRegenerate={handleRegenerate}
           onAutomationToggle={handleAutomationToggle}
           onFadeToggle={handleFadeToggle}
+          onDelete={handleDelete}
+          onAddSound={onAddSound ? handleAddSoundPrompt : undefined}
+          isAdding={isAdding}
           headphoneMode={headphoneMode}
           onHeadphoneToggle={() => setHeadphoneMode((value) => !value)}
         />

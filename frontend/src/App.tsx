@@ -137,6 +137,27 @@ export default function App() {
     return nextElement;
   };
 
+  const handleAddSound = async (soundPrompt: string): Promise<SpatialElement> => {
+    const stubElement: SpatialElement = {
+      id: crypto.randomUUID(),
+      label: "New Sound",
+      x: 0,
+      y: 0.5,
+      reverb: 0.2,
+      individual_audio_url: "",
+      sound_prompt: soundPrompt,
+    };
+    const result = await regenerateElement(stubElement, soundPrompt, decomposeData ?? undefined);
+    const newElement = result.element as SpatialElement;
+
+    setGenerateData((current) => {
+      if (!current) return current;
+      return { ...current, elements: [...current.elements, newElement] };
+    });
+
+    return newElement;
+  };
+
   useEffect(() => {
     if (!decomposeData || phase !== "processing") return;
 
@@ -294,6 +315,7 @@ export default function App() {
             sceneDuration={generateData?.duration_seconds ?? 15}
             onRegenerate={handleEditorRegenerate}
             onSave={handleEditorSave}
+            onAddSound={handleAddSound}
           />
         </section>
       )}
