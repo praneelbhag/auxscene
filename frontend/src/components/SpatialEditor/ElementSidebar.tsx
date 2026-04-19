@@ -45,6 +45,9 @@ interface ElementSidebarProps {
   onRegenerate: (id: string, editInstruction: string) => void;
   onAutomationToggle: (id: string) => void;
   onFadeToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+  onAddSound?: (prompt: string) => Promise<void>;
+  isAdding?: boolean;
   headphoneMode: boolean;
   onHeadphoneToggle: () => void;
 }
@@ -59,11 +62,16 @@ export function ElementSidebar({
   onRegenerate,
   onAutomationToggle,
   onFadeToggle,
+  onDelete,
+  onAddSound,
+  isAdding,
   headphoneMode,
   onHeadphoneToggle,
 }: ElementSidebarProps) {
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [addPrompt, setAddPrompt] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
 
   return (
     <div className="element-sidebar">
@@ -72,9 +80,19 @@ export function ElementSidebar({
           <div className="sidebar-element-header">
             <span className="sidebar-dot" style={{ background: el.color }} />
             <span className="sidebar-label">{el.label}</span>
-            {el.mix && (
-              <span className="sidebar-role">{el.mix.role ?? "texture"}</span>
-            )}
+            <div className="sidebar-header-right">
+              {el.mix && (
+                <span className="sidebar-role">{el.mix.role ?? "texture"}</span>
+              )}
+              <button
+                className="delete-sound-btn"
+                type="button"
+                title="Remove sound"
+                onClick={() => onDelete(el.id)}
+              >
+                ×
+              </button>
+            </div>
           </div>
 
           {el.sound_prompt && (
@@ -185,6 +203,64 @@ export function ElementSidebar({
           )}
         </div>
       ))}
+
+      {onAddSound && (
+        <div className="add-sound-section">
+          {showAddForm ? (
+            <div className="add-sound-form">
+              <input
+                className="add-sound-input"
+                type="text"
+                placeholder="Describe a new sound..."
+                value={addPrompt}
+                onChange={(e) => setAddPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && addPrompt.trim() && !isAdding) {
+                    void onAddSound(addPrompt.trim()).then(() => {
+                      setAddPrompt("");
+                      setShowAddForm(false);
+                    });
+                  } else if (e.key === "Escape") {
+                    setShowAddForm(false);
+                    setAddPrompt("");
+                  }
+                }}
+                autoFocus
+              />
+              <div className="add-sound-form-actions">
+                <button
+                  className="add-sound-submit-btn"
+                  type="button"
+                  disabled={!addPrompt.trim() || isAdding}
+                  onClick={() => {
+                    void onAddSound(addPrompt.trim()).then(() => {
+                      setAddPrompt("");
+                      setShowAddForm(false);
+                    });
+                  }}
+                >
+                  {isAdding ? "Generating..." : "Generate"}
+                </button>
+                <button
+                  className="add-sound-cancel-btn"
+                  type="button"
+                  onClick={() => { setShowAddForm(false); setAddPrompt(""); }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="add-sound-btn"
+              type="button"
+              onClick={() => setShowAddForm(true)}
+            >
+              + Add Sound
+            </button>
+          )}
+        </div>
+      )}
 
       <button
         className={`headphone-btn${headphoneMode ? " active" : ""}`}

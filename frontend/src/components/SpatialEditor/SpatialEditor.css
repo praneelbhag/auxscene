@@ -181,15 +181,138 @@
   margin-bottom: 6px;
 }
 
-.sidebar-role {
+.sidebar-header-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.sidebar-role {
   font-family: 'Josefin Sans', sans-serif;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-3);
-  flex-shrink: 0;
+}
+
+.delete-sound-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.delete-sound-btn:hover {
+  background: rgba(247, 79, 106, 0.15);
+  color: #f74f6a;
+}
+
+.add-sound-section {
+  padding: var(--space-sm) 0 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.add-sound-btn {
+  width: 100%;
+  padding: 6px 0;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-3);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.add-sound-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-2);
+}
+
+.add-sound-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.add-sound-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2, rgba(255,255,255,0.05));
+  color: var(--text-1);
+  font-family: inherit;
+  font-size: 11px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.add-sound-input:focus {
+  border-color: var(--border-strong);
+}
+
+.add-sound-form-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.add-sound-submit-btn {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--accent, #4f8ef7);
+  color: #fff;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.add-sound-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.add-sound-cancel-btn {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-3);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.add-sound-cancel-btn:hover {
+  color: var(--text-2);
 }
 
 .sidebar-dot {
