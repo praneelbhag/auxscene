@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     )
     elevenlabs_output_format: str = Field(default="pcm_24000", alias="ELEVENLABS_OUTPUT_FORMAT")
     elevenlabs_prompt_influence: float = Field(default=0.3, alias="ELEVENLABS_PROMPT_INFLUENCE")
+    elevenlabs_max_concurrent_requests: int = Field(
+        default=5,
+        alias="ELEVENLABS_MAX_CONCURRENT_REQUESTS",
+        ge=1,
+    )
     audio_cache_enabled: bool = Field(default=True, alias="AUDIO_CACHE_ENABLED")
     audio_cache_similarity_threshold: float = Field(
         default=0.92,

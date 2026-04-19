@@ -22,30 +22,42 @@ async def generate_sound(
     loop: bool,
     client: httpx.AsyncClient,
 ) -> bytes:
-    try:
-        response = await client.post(
-            ELEVENLABS_SOUND_GENERATION_URL,
-            headers={"xi-api-key": api_key},
-            params={"output_format": output_format},
-            json={
-                "text": sound_prompt,
-                "duration_seconds": duration_seconds,
-                "prompt_influence": prompt_influence,
-                "model_id": model_id,
-                "loop": loop,
-            },
-            timeout=120.0,
-        )
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        detail = exc.response.text[:500] if exc.response is not None else str(exc)
-        raise ElevenLabsGenerationError(
-            f"ElevenLabs returned {exc.response.status_code}: {detail}"
-        ) from exc
-    except httpx.HTTPError as exc:
-        raise ElevenLabsGenerationError(f"ElevenLabs request failed: {exc}") from exc
+    for attempt in range(3):
+        try:
+            response = await client.post(
+                ELEVENLABS_SOUND_GENERATION_URL,
+                headers={"xi-api-key": api_key},
+                params={"output_format": output_format},
+                json={
+                    "text": sound_prompt,
+                    "duration_seconds": duration_seconds,
+                    "prompt_influence": prompt_influence,
+                    "model_id": model_id,
+                    "loop": loop,
+                },
+                timeout=120.0,
+            )
+            response.raise_for_status()
+            return response.content
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code
+            if status_code == 429 and attempt < 2:
+                retry_after = exc.response.headers.get("retry-after")
+                try:
+                    delay = float(retry_after) if retry_after else 2.0 * (attempt + 1)
+                except ValueError:
+                    delay = 2.0 * (attempt + 1)
+                await asyncio.sleep(delay)
+                continue
 
-    return response.content
+            detail = exc.response.text[:500] if exc.response is not None else str(exc)
+            raise ElevenLabsGenerationError(
+                f"ElevenLabs returned {status_code}: {detail}"
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise ElevenLabsGenerationError(f"ElevenLabs request failed: {exc}") from exc
+
+    raise ElevenLabsGenerationError("ElevenLabs request failed after retrying rate limits")
 
 
 async def generate_all_sounds(

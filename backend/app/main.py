@@ -46,4 +46,5 @@ async def health_check() -> dict[str, object]:
         "audioCacheEnabled": settings.audio_cache_enabled,
         "audioReviewEnabled": settings.audio_review_enabled,
         "audioReviewAutoRetry": settings.audio_review_auto_retry,
+        "elevenLabsMaxConcurrentRequests": settings.elevenlabs_max_concurrent_requests,
     }

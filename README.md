@@ -64,6 +64,7 @@ The fuller audio architecture is documented in [`docs/audio-pipeline.md`](docs/a
 | Abstract detection and scene decomposition | `google-genai` | `GEMINI_API_KEY`, `GEMINI_MODEL` |
 | Web search grounding | Gemini Google Search grounding | `GEMINI_API_KEY`, `ENABLE_GOOGLE_SEARCH_GROUNDING` |
 | Sound effect generation | `elevenlabs` | `ELEVENLABS_API_KEY` |
+| Sound effect concurrency | Backend request queue | `ELEVENLABS_MAX_CONCURRENT_REQUESTS` |
 | Prompt review and audio review | Gemini | `GEMINI_API_KEY`, `AUDIO_REVIEW_ENABLED`, `AUDIO_REVIEW_MODEL`, `AUDIO_REVIEW_AUTO_RETRY` |
 | Audio cache | Local PCM cache | `AUDIO_CACHE_ENABLED`, `AUDIO_CACHE_SIMILARITY_THRESHOLD`, `AUDIO_CACHE_DIR` |
 | Spatial DSP and export | `pedalboard`, `numpy`, `scipy`, built-in WAV export | `MIX_SAMPLE_RATE`, `MIX_CHANNELS` |

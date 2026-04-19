@@ -36,6 +36,7 @@ from .spatial_dsp import (
 
 router = APIRouter(prefix="/api", tags=["audio"])
 settings = get_settings()
+_ELEVENLABS_REQUESTS = asyncio.Semaphore(settings.elevenlabs_max_concurrent_requests)
 
 
 @dataclass
@@ -91,16 +92,17 @@ async def _get_or_generate_audio_bytes(
     if cached:
         return cached.audio_bytes, cached.cache_hit, cached.similarity
 
-    audio_bytes = await generate_sound(
-        api_key=settings.elevenlabs_api_key,
-        sound_prompt=element.sound_prompt,
-        duration_seconds=duration_seconds,
-        model_id=settings.elevenlabs_model_id,
-        output_format=settings.elevenlabs_output_format,
-        prompt_influence=_element_prompt_influence(element),
-        loop=element.generation.loop,
-        client=client,
-    )
+    async with _ELEVENLABS_REQUESTS:
+        audio_bytes = await generate_sound(
+            api_key=settings.elevenlabs_api_key,
+            sound_prompt=element.sound_prompt,
+            duration_seconds=duration_seconds,
+            model_id=settings.elevenlabs_model_id,
+            output_format=settings.elevenlabs_output_format,
+            prompt_influence=_element_prompt_influence(element),
+            loop=element.generation.loop,
+            client=client,
+        )
     if save_cache:
         save_cached_audio(element, settings, duration_seconds, audio_bytes)
     return audio_bytes, False, None
