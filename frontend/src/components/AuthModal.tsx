@@ -49,7 +49,7 @@ export function AuthModal({ onSuccess, onClose }: AuthModalProps) {
         <button className="auth-close" onClick={onClose} type="button" aria-label="Close">×</button>
 
         <div className="auth-logo">
-          <span className="eyebrow">SoundScene</span>
+          <span className="eyebrow">aux.scene</span>
         </div>
 
         <div className="auth-tabs">
