@@ -71,6 +71,19 @@ export interface SpatialElement {
     suggested_prompt?: string | null;
   } | null;
   playback_warning?: string | null;
+  editor_state?: {
+    clipStart?: number;
+    clipEnd?: number;
+    fadeEnabled?: boolean;
+    automationEnabled?: boolean;
+    autoStart?: number;
+    autoEnd?: number;
+    endX?: number;
+    endY?: number;
+    volumeOverride?: number;
+    muted?: boolean;
+    solo?: boolean;
+  };
 }
 
 interface InternalElement extends SpatialElement {
@@ -98,23 +111,36 @@ interface SpatialEditorProps {
   onAddSound?: (prompt: string) => Promise<SpatialElement>;
 }
 
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
+const gainDbToVolume = (gainDb: number | null | undefined) => {
+  if (gainDb == null) return 1;
+  return clamp(10 ** (gainDb / 20), 0, 1);
+};
+
+const volumeToGainDb = (volume: number) => {
+  if (volume <= 0.001) return -36;
+  return clamp(20 * Math.log10(volume), -36, 6);
+};
+
 function makeInternalElements(elements: SpatialElement[], sceneDuration: number): InternalElement[] {
   return elements.map((element, index) => ({
     ...element,
     color: COLORS[index % COLORS.length],
-    muted: false,
-    solo: false,
-    volumeOverride: 1,
+    muted: element.editor_state?.muted ?? false,
+    solo: element.editor_state?.solo ?? false,
+    volumeOverride: element.editor_state?.volumeOverride ?? gainDbToVolume(element.mix?.gain_db),
     isPlaying: false,
     isRegenerating: false,
-    clipStart: element.mix?.start_seconds ?? 0,
-    clipEnd: sceneDuration,
-    fadeEnabled: false,
-    automationEnabled: false,
-    autoStart: element.mix?.start_seconds ?? 0,
-    autoEnd: sceneDuration,
-    endX: element.x,
-    endY: element.y,
+    clipStart: element.editor_state?.clipStart ?? element.mix?.start_seconds ?? 0,
+    clipEnd: element.editor_state?.clipEnd ?? sceneDuration,
+    fadeEnabled: element.editor_state?.fadeEnabled ?? Boolean(element.mix?.fade_ms),
+    automationEnabled: element.editor_state?.automationEnabled ?? false,
+    autoStart: element.editor_state?.autoStart ?? element.mix?.start_seconds ?? 0,
+    autoEnd: element.editor_state?.autoEnd ?? sceneDuration,
+    endX: element.editor_state?.endX ?? element.x,
+    endY: element.editor_state?.endY ?? element.y,
   }));
 }
 
@@ -123,7 +149,35 @@ function toSpatialElements(elements: InternalElement[]): SpatialElement[] {
     color, muted, solo, volumeOverride, isPlaying, isRegenerating,
     clipStart, clipEnd, fadeEnabled, automationEnabled, autoStart, autoEnd, endX, endY,
     ...element
-  }) => element);
+  }) => {
+    const durationSeconds = Math.max(0.5, clipEnd - clipStart);
+    return {
+      ...element,
+      generation: {
+        ...element.generation,
+        duration_seconds: durationSeconds,
+      },
+      mix: {
+        ...element.mix,
+        start_seconds: clipStart,
+        gain_db: muted ? -36 : volumeToGainDb(volumeOverride),
+        fade_ms: fadeEnabled ? element.mix?.fade_ms ?? 1000 : null,
+      },
+      editor_state: {
+        clipStart,
+        clipEnd,
+        fadeEnabled,
+        automationEnabled,
+        autoStart,
+        autoEnd,
+        endX,
+        endY,
+        volumeOverride,
+        muted,
+        solo,
+      },
+    };
+  });
 }
 
 export default function SpatialEditor({

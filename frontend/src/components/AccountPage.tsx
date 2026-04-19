@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
+import type { DecomposeResponse, GenerateResponse } from "../types";
 
 interface User { id: string; email: string; name: string; }
 
-interface HistoryEntry {
+export interface HistoryEntry {
   id: string;
   prompt: string;
   audio_url: string | null;
   image_url: string | null;
   duration_seconds: number | null;
   created_at: string;
+  decompose_data: DecomposeResponse | null;
+  generate_data: GenerateResponse | null;
 }
 
 interface AccountPageProps {
@@ -16,9 +19,11 @@ interface AccountPageProps {
   token: string;
   onSignOut: () => void;
   onBack: () => void;
+  onOpenScene: (entry: HistoryEntry) => void;
+  canOpenScene: (entry: HistoryEntry) => boolean;
 }
 
-const API = "http://localhost:8000/api";
+const API = `${import.meta.env.VITE_API_BASE_URL || ""}/api`;
 
 function formatDate(iso: string): string {
   try {
@@ -31,7 +36,14 @@ function formatDate(iso: string): string {
   }
 }
 
-export function AccountPage({ user, token, onSignOut, onBack }: AccountPageProps) {
+export function AccountPage({
+  user,
+  token,
+  onSignOut,
+  onBack,
+  onOpenScene,
+  canOpenScene,
+}: AccountPageProps) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -145,6 +157,14 @@ export function AccountPage({ user, token, onSignOut, onBack }: AccountPageProps
                         {downloading === entry.id ? "Downloading…" : "↓ Download"}
                       </button>
                     )}
+                    <button
+                      className="history-open"
+                      type="button"
+                      disabled={!canOpenScene(entry)}
+                      onClick={() => onOpenScene(entry)}
+                    >
+                      Edit Scene
+                    </button>
                     <button
                       className="history-delete"
                       type="button"

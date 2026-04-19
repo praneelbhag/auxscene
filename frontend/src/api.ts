@@ -3,7 +3,7 @@ import decomposeMock from "./mocks/decomposeResponse.json";
 import generateMock from "./mocks/generateResponse.json";
 import type { DecomposeResponse, GenerateResponse, RegenerateElementResponse, SoundElement } from "./types";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
 const useMocks = import.meta.env.VITE_USE_MOCKS === "true";
 
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));

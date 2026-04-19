@@ -1622,7 +1622,8 @@ input[type="range"] {
   margin-top: auto;
 }
 
-.history-download {
+.history-download,
+.history-open {
   flex: 1;
   padding: 8px;
   border: 0;
@@ -1637,8 +1638,16 @@ input[type="range"] {
   transition: opacity 0.15s;
 }
 
-.history-download:disabled { opacity: 0.5; cursor: not-allowed; }
-.history-download:hover:not(:disabled) { opacity: 0.85; }
+.history-open {
+  background: var(--button-secondary);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.history-download:disabled,
+.history-open:disabled { opacity: 0.5; cursor: not-allowed; }
+.history-download:hover:not(:disabled),
+.history-open:hover:not(:disabled) { opacity: 0.85; }
 
 .history-delete {
   padding: 8px 14px;

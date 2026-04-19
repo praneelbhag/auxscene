@@ -1,7 +1,7 @@
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { decomposeImage, decomposePrompt, generateScene, regenerateElement } from "./api";
 import { AuthModal } from "./components/AuthModal";
-import { AccountPage } from "./components/AccountPage";
+import { AccountPage, type HistoryEntry } from "./components/AccountPage";
 import { ProcessingView } from "./components/ProcessingView";
 import { ResultView } from "./components/ResultView";
 import { SceneInput } from "./components/SceneInput";
@@ -15,7 +15,7 @@ import type {
   GenerationStatus,
 } from "./types";
 
-const API = "http://localhost:8000/api";
+const API = `${import.meta.env.VITE_API_BASE_URL || ""}/api`;
 
 interface AuthUser { id: string; email: string; name: string; }
 
@@ -29,6 +29,7 @@ export default function App() {
   const [generateData, setGenerateData] = useState<GenerateResponse | null>(null);
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>({});
   const [error, setError] = useState<string | null>(null);
+  const [currentHistoryEntryId, setCurrentHistoryEntryId] = useState<string | null>(null);
 
   // Auth state — persisted to localStorage
   const [user, setUser] = useState<AuthUser | null>(() => {
@@ -54,10 +55,14 @@ export default function App() {
     setShowAccount(false);
   };
 
-  const saveToHistory = async (generated: GenerateResponse, promptText: string) => {
+  const saveToHistory = async (
+    generated: GenerateResponse,
+    decomposed: DecomposeResponse,
+    promptText: string,
+  ) => {
     if (!token) return;
     try {
-      await fetch(`${API}/user/history`, {
+      const response = await fetch(`${API}/user/history`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -65,6 +70,34 @@ export default function App() {
           audio_url: generated.audio_url,
           image_url: generated.image_url ?? null,
           duration_seconds: generated.duration_seconds ?? null,
+          decompose_data: decomposed,
+          generate_data: generated,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && typeof data.id === "string") {
+        setCurrentHistoryEntryId(data.id);
+      }
+    } catch { /* non-critical */ }
+  };
+
+  const updateHistoryScene = async (
+    entryId: string | null,
+    nextGenerated: GenerateResponse,
+    nextDecomposed: DecomposeResponse | null,
+  ) => {
+    if (!token || !entryId) return;
+    try {
+      await fetch(`${API}/user/history/${entryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          prompt,
+          audio_url: nextGenerated.audio_url,
+          image_url: nextGenerated.image_url ?? null,
+          duration_seconds: nextGenerated.duration_seconds ?? null,
+          decompose_data: nextDecomposed,
+          generate_data: nextGenerated,
         }),
       });
     } catch { /* non-critical */ }
@@ -91,29 +124,34 @@ export default function App() {
       cache_similarity: element.cache_similarity,
       audio_review: element.audio_review,
       playback_warning: element.playback_warning,
+      editor_state: element.editor_state,
     }));
   }, [generateData]);
 
   const handleEditorSave = (nextElements: SpatialElement[]) => {
-    setGenerateData((current) => {
-      if (!current) return current;
+    if (!generateData) return;
 
-      return {
-        ...current,
-        elements: current.elements.map((element) => {
-          const edited = nextElements.find((item) => item.id === element.id);
-          return edited
-            ? {
-                ...element,
-                x: edited.x,
-                y: edited.y,
-                reverb: edited.reverb,
-                individual_audio_url: edited.individual_audio_url,
-              }
-            : element;
-        }),
-      };
-    });
+    const nextGenerated: GenerateResponse = {
+      ...generateData,
+      elements: nextElements.map((edited) => {
+        const existing = generateData.elements.find((element) => element.id === edited.id);
+        return existing ? { ...existing, ...edited } : edited;
+      }),
+    };
+
+    const nextDecomposed = decomposeData
+      ? {
+          ...decomposeData,
+          elements: nextElements.map((edited) => {
+            const existing = decomposeData.elements.find((element) => element.id === edited.id);
+            return existing ? { ...existing, ...edited } : edited;
+          }),
+        }
+      : null;
+
+    setGenerateData(nextGenerated);
+    setDecomposeData(nextDecomposed);
+    void updateHistoryScene(currentHistoryEntryId, nextGenerated, nextDecomposed);
   };
 
   const handleEditorRegenerate = async (
@@ -190,6 +228,7 @@ export default function App() {
     setDecomposeData(null);
     setGenerateData(null);
     setGenerationStatus({});
+    setCurrentHistoryEntryId(null);
     setPhase("processing");
 
     try {
@@ -212,7 +251,7 @@ export default function App() {
         }, {}),
       );
       setGenerateData(generated);
-      void saveToHistory(generated, nextPrompt || (image ? `Image: ${image.name}` : ""));
+      void saveToHistory(generated, decomposed, nextPrompt || (image ? `Image: ${image.name}` : ""));
       setPhase("result");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Scene generation failed.");
@@ -228,6 +267,37 @@ export default function App() {
     setGenerateData(null);
     setGenerationStatus({});
     setError(null);
+    setCurrentHistoryEntryId(null);
+  };
+
+  const canOpenSavedScene = (entry: HistoryEntry) =>
+    Boolean(entry.decompose_data && entry.generate_data) ||
+    Boolean(decomposeData && generateData && entry.audio_url === generateData.audio_url);
+
+  const openSavedScene = (entry: HistoryEntry) => {
+    const savedDecomposeData = entry.decompose_data ?? (
+      entry.audio_url === generateData?.audio_url ? decomposeData : null
+    );
+    const savedGenerateData = entry.generate_data ?? (
+      entry.audio_url === generateData?.audio_url ? generateData : null
+    );
+
+    if (!savedDecomposeData || !savedGenerateData) return;
+
+    setPrompt(entry.prompt);
+    setSceneDurationSeconds(entry.duration_seconds ?? savedGenerateData.duration_seconds ?? 15);
+    setDecomposeData(savedDecomposeData);
+    setGenerateData(savedGenerateData);
+    setGenerationStatus(
+      savedGenerateData.elements.reduce<GenerationStatus>((statuses, element) => {
+        statuses[element.id] = "done";
+        return statuses;
+      }, {}),
+    );
+    setError(null);
+    setShowAccount(false);
+    setCurrentHistoryEntryId(entry.id);
+    setPhase("editor");
   };
 
   if (showAccount && user && token) {
@@ -238,6 +308,8 @@ export default function App() {
           token={token}
           onSignOut={handleSignOut}
           onBack={() => setShowAccount(false)}
+          onOpenScene={openSavedScene}
+          canOpenScene={canOpenSavedScene}
         />
       </main>
     );

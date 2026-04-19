@@ -35,6 +35,19 @@ export type SoundElement = {
   } | null;
   playback_warning?: string | null;
   individual_audio_url?: string;
+  editor_state?: {
+    clipStart?: number;
+    clipEnd?: number;
+    fadeEnabled?: boolean;
+    automationEnabled?: boolean;
+    autoStart?: number;
+    autoEnd?: number;
+    endX?: number;
+    endY?: number;
+    volumeOverride?: number;
+    muted?: boolean;
+    solo?: boolean;
+  };
 };
 
 export type DecomposeResponse = {

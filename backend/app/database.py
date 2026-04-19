@@ -34,4 +34,12 @@ def init_db() -> None:
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         """)
+        columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(audio_history)").fetchall()
+        }
+        if "decompose_json" not in columns:
+            conn.execute("ALTER TABLE audio_history ADD COLUMN decompose_json TEXT")
+        if "generate_json" not in columns:
+            conn.execute("ALTER TABLE audio_history ADD COLUMN generate_json TEXT")
         conn.commit()
