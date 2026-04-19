@@ -162,6 +162,14 @@
   font-family: 'Mulish', sans-serif;
 }
 
+.mix-script-text {
+  margin: calc(var(--space-sm) * -0.35) 0 var(--space-sm);
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.4;
+  font-family: 'Mulish', sans-serif;
+}
+
 .quality-meta {
   display: flex;
   flex-wrap: wrap;
@@ -173,7 +181,8 @@
   padding: 2px 6px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  color: var(--accent);
+  color: var(--status-text);
+  background: var(--status-bg);
   font-size: 10px;
   font-weight: 800;
 }
@@ -181,6 +190,18 @@
 .review-note {
   margin: 0 0 var(--space-sm);
   color: var(--accent-2);
+  font-size: 10px;
+  line-height: 1.4;
+  font-family: 'Mulish', sans-serif;
+}
+
+.playback-warning {
+  margin: 0 0 var(--space-sm);
+  padding: 6px 7px;
+  border: 1px solid oklch(38% 0.055 35);
+  border-radius: 6px;
+  color: var(--warning-text);
+  background: var(--warning-bg);
   font-size: 10px;
   line-height: 1.4;
   font-family: 'Mulish', sans-serif;
@@ -249,10 +270,10 @@
   width: 100%;
   margin-top: var(--space-sm);
   padding: 7px 8px;
-  border: 1px solid oklch(44% 0.1 150);
+  border: 1px solid oklch(38% 0.055 150);
   border-radius: 6px;
-  background: oklch(22% 0.06 150);
-  color: oklch(78% 0.12 150);
+  background: var(--button-primary);
+  color: oklch(94% 0.018 150);
   font-family: 'Josefin Sans', sans-serif;
   font-size: 10px;
   font-weight: 800;
@@ -270,8 +291,8 @@
   padding: 4px 0;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: transparent;
-  color: var(--text-3);
+  background: var(--button-secondary);
+  color: var(--text-2);
   font-family: 'Josefin Sans', sans-serif;
   font-size: 10px;
   font-weight: 700;
@@ -286,21 +307,21 @@
 }
 
 .solo-btn.active {
-  background: oklch(28% 0.06 250);
-  border-color: oklch(60% 0.08 250);
-  color: oklch(72% 0.08 250);
+  background: oklch(24% 0.035 250);
+  border-color: oklch(40% 0.04 250);
+  color: var(--text);
 }
 
 .element-play-btn.active {
-  background: #173525;
-  border-color: #4fc97e;
-  color: #4fc97e;
+  background: var(--button-primary);
+  border-color: oklch(40% 0.04 150);
+  color: oklch(94% 0.018 150);
 }
 
 .mute-btn.active {
-  background: oklch(22% 0.07 22);
-  border-color: oklch(55% 0.18 22);
-  color: oklch(70% 0.12 22);
+  background: oklch(23% 0.055 22);
+  border-color: oklch(38% 0.055 22);
+  color: oklch(86% 0.035 22);
 }
 
 .headphone-btn {
@@ -308,8 +329,8 @@
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: transparent;
-  color: var(--text-2);
+  background: var(--button-secondary);
+  color: var(--text);
   font-family: 'Josefin Sans', sans-serif;
   font-size: 11px;
   font-weight: 700;
@@ -320,9 +341,9 @@
 }
 
 .headphone-btn.active {
-  background: oklch(28% 0.06 250);
-  border-color: oklch(55% 0.08 250);
-  color: oklch(72% 0.08 250);
+  background: oklch(24% 0.035 250);
+  border-color: oklch(40% 0.04 250);
+  color: var(--text);
 }
 
 .headphone-reminder {
@@ -354,7 +375,7 @@
 
 .editor-timeline input[type="range"] {
   width: 100%;
-  accent-color: #4fc97e;
+  accent-color: var(--button-primary);
   cursor: pointer;
 }
 
@@ -385,19 +406,19 @@
 .control-btn:active { transform: scale(0.97); }
 
 .play-btn {
-  background: var(--accent);
-  color: var(--accent-text);
+  background: var(--button-primary);
+  color: oklch(94% 0.018 150);
 }
 
 .pause-btn {
-  background: var(--accent-dim);
-  color: var(--accent);
-  border: 1px solid oklch(74% 0.13 72 / 0.3);
+  background: var(--button-secondary);
+  color: var(--text);
+  border: 1px solid var(--border);
 }
 
 .reset-btn {
-  background: transparent;
-  color: var(--text-2);
+  background: var(--button-secondary);
+  color: var(--text);
   border: 1px solid var(--border);
 }
 
@@ -410,20 +431,20 @@
 .load-error {
   margin: 0;
   padding: var(--space-sm) var(--space-md);
-  background: oklch(22% 0.07 22 / 0.6);
-  border: 1px solid oklch(55% 0.18 22 / 0.38);
+  background: oklch(22% 0.07 22);
+  border: 1px solid oklch(38% 0.055 22);
   border-radius: 8px;
   color: oklch(80% 0.10 22);
   font-size: 13px;
 }
 
 .save-btn {
-  background: #4fc97e;
-  color: #06140b;
+  background: var(--button-primary);
+  color: oklch(94% 0.018 150);
 }
 
 .save-message {
-  color: #4fc97e;
+  color: var(--status-text);
   font-size: 13px;
   font-weight: 700;
 }

@@ -23,12 +23,14 @@ from .schemas import (
 )
 from .spatial_dsp import (
     AudioTrack,
+    PositionedAudioTrack,
     apply_spatial,
+    audio_level_dbfs,
     audio_bytes_to_audio_track,
     condition_for_natural_mix,
     enforce_duration,
     export_wav,
-    mix_all,
+    mix_timeline,
     normalize_for_mix,
 )
 
@@ -65,6 +67,10 @@ def _element_duration(element: SceneElement, fallback: float) -> float:
 
 def _element_prompt_influence(element: SceneElement) -> float:
     return element.generation.prompt_influence or settings.elevenlabs_prompt_influence
+
+
+def _element_start(element: SceneElement) -> float:
+    return element.mix.start_seconds
 
 
 async def _get_or_generate_audio_bytes(
@@ -104,12 +110,29 @@ def _process_element_audio(
     audio = audio_bytes_to_audio_track(audio_bytes, settings.elevenlabs_output_format)
     audio = enforce_duration(audio, duration_seconds)
     audio = normalize_for_mix(audio, settings.mix_sample_rate, settings.mix_channels)
-    audio = condition_for_natural_mix(audio, element.layer)
+    audio = condition_for_natural_mix(
+        audio,
+        element.layer,
+        gain_db=element.mix.gain_db,
+        high_cut_hz=element.mix.high_cut_hz,
+        low_cut_hz=element.mix.low_cut_hz,
+        fade_ms=element.mix.fade_ms,
+    )
     processed = apply_spatial(audio, element.x, element.y, element.reverb)
 
     elem_file = output_dir / f"{element.id}_{job_id}.wav"
     export_wav(processed, elem_file)
     return processed, elem_file
+
+
+def _playback_warning(audio: AudioTrack, element: SceneElement) -> str | None:
+    rms_dbfs, peak = audio_level_dbfs(audio)
+    if peak < 0.003 or rms_dbfs < -58.0:
+        return (
+            f"{element.label} generated as near-silent audio "
+            f"({rms_dbfs:.1f} dB RMS). Try regenerating this sound."
+        )
+    return None
 
 
 def _should_retry_after_review(audio_review: AudioReview | None) -> bool:
@@ -160,6 +183,7 @@ async def _render_element(
         job_id=job_id,
         duration_seconds=duration_seconds,
     )
+    playback_warning = _playback_warning(processed, element)
 
     audio_review: AudioReview | None = None
     if not cache_hit:
@@ -185,6 +209,7 @@ async def _render_element(
             job_id=job_id,
             duration_seconds=duration_seconds,
         )
+        playback_warning = _playback_warning(processed, response_element)
         audio_review = None
         if not cache_hit:
             audio_review = await review_audio_file(
@@ -205,11 +230,13 @@ async def _render_element(
         reverb=response_element.reverb,
         layer=response_element.layer,
         generation=response_element.generation,
+        mix=response_element.mix,
         reviewer_notes=response_element.reviewer_notes,
         cache_key_hint=response_element.cache_key_hint,
         cache_hit=cache_hit,
         cache_similarity=cache_similarity,
         audio_review=audio_review,
+        playback_warning=playback_warning,
         individual_audio_url=_static_url(request, elem_file),
     )
 
@@ -243,7 +270,15 @@ async def generate_scene(payload: GenerateRequest, request: Request) -> Generate
     job_state = JobState(status="running", total_elements=len(payload.elements))
     _JOB_STATUS[job_id] = job_state
     output_dir = _ensure_output_dir()
-    duration = max([payload.duration_seconds, *[_element_duration(element, payload.duration_seconds) for element in payload.elements]])
+    duration = max(
+        [
+            payload.duration_seconds,
+            *[
+                _element_start(element) + _element_duration(element, payload.duration_seconds)
+                for element in payload.elements
+            ],
+        ]
+    )
     scene_stem = f"scene_{job_id}"
 
     try:
@@ -271,15 +306,26 @@ async def generate_scene(payload: GenerateRequest, request: Request) -> Generate
             ]
             rendered = await asyncio.gather(*render_tasks)
 
-        processed_tracks: list[AudioTrack] = []
+        processed_tracks: list[PositionedAudioTrack] = []
         element_responses: list[GenerateElementResponse] = []
 
         for element, (processed, response) in zip(payload.elements, rendered, strict=True):
-            processed_tracks.append(processed)
+            processed_tracks.append(
+                PositionedAudioTrack(
+                    track=processed,
+                    start_seconds=_element_start(element),
+                    layer=element.layer,
+                    duck_background=element.mix.duck_background,
+                )
+            )
             element_responses.append(response)
             job_state.completed_elements.append(element.id)
 
-        mixed = mix_all(processed_tracks, duration_seconds=duration, sample_rate=settings.mix_sample_rate)
+        mixed = mix_timeline(
+            processed_tracks,
+            duration_seconds=duration,
+            sample_rate=settings.mix_sample_rate,
+        )
         mixed_file = output_dir / f"{scene_stem}.wav"
         export_wav(mixed, mixed_file)
 

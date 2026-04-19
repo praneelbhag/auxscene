@@ -28,6 +28,9 @@ export function ElementList({ animated = false, elements }: ElementListProps) {
           <div>
             <h3>{element.label}</h3>
             <p>{element.sound_prompt ?? element.layer ?? "Spatial audio layer"}</p>
+            {element.playback_warning && (
+              <p className="element-warning">{element.playback_warning}</p>
+            )}
           </div>
           <dl>
             <div>

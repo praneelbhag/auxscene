@@ -16,6 +16,17 @@ class GenerationSettings(BaseModel):
     prompt_influence: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
+class MixSettings(BaseModel):
+    start_seconds: float = Field(default=0.0, ge=0.0, le=30.0)
+    gain_db: float | None = Field(default=None, ge=-36.0, le=6.0)
+    density: str = "continuous"
+    role: str = "texture"
+    high_cut_hz: float | None = Field(default=None, ge=300.0, le=20000.0)
+    low_cut_hz: float | None = Field(default=None, ge=20.0, le=1000.0)
+    duck_background: bool = False
+    fade_ms: float | None = Field(default=None, ge=0.0, le=2000.0)
+
+
 class SoundElement(BaseModel):
     id: str
     sound_prompt: str = Field(min_length=1, max_length=240)
@@ -25,6 +36,7 @@ class SoundElement(BaseModel):
     reverb: float = Field(ge=0.0, le=1.0)
     layer: Layer
     generation: GenerationSettings = Field(default_factory=GenerationSettings)
+    mix: MixSettings = Field(default_factory=MixSettings)
     reviewer_notes: list[str] = Field(default_factory=list)
     cache_key_hint: str | None = None
 

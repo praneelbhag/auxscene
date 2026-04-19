@@ -51,7 +51,9 @@ curl -X POST http://localhost:8000/api/decompose `
 
 The response includes `original_prompt`, `is_abstract`, `grounding_sources`, `concrete_description`, and 3-6 spatial `elements`. Abstract prompts use Gemini with Google Search grounding before decomposition; concrete prompts skip grounding and decompose directly.
 
-Each element also carries generation hints (`duration_seconds`, `prompt_influence`, and `loop`), reviewer notes, and a cache key hint. The audio backend uses those fields to generate tighter ElevenLabs prompts, reuse matching cached sounds, and optionally retry one low-scoring sound with the Gemini audio reviewer suggested prompt.
+Each element also carries generation hints (`duration_seconds`, `prompt_influence`, and `loop`), mix script fields (`start_seconds`, `gain_db`, `density`, EQ cuts, and ducking), reviewer notes, and a cache key hint. The audio backend uses those fields to generate tighter ElevenLabs prompts, reuse matching cached sounds, and optionally retry one low-scoring sound with the Gemini audio reviewer suggested prompt.
+
+The fuller audio architecture is documented in [`docs/audio-pipeline.md`](docs/audio-pipeline.md).
 
 ## Provider Map
 

@@ -86,7 +86,7 @@ export async function setupElement(element: {
 
   const source = ctx.createMediaElementSource(audio);
   const gainNode = ctx.createGain();
-  gainNode.gain.value = 1 - element.y * 0.85;
+  gainNode.gain.value = 1 - element.y * 0.55;
 
   const pannerNode = ctx.createStereoPanner();
   pannerNode.pan.value = element.x;
@@ -132,7 +132,7 @@ export function seekElement(nodes: AudioNodes, time: number) {
 export function updateElementPosition(nodes: AudioNodes, newX: number, newY: number) {
   const ctx = getAudioContext();
   nodes.pannerNode.pan.setValueAtTime(newX, ctx.currentTime);
-  const newGain = 1 - newY * 0.85;
+  const newGain = 1 - newY * 0.55;
   nodes.gainNode.gain.linearRampToValueAtTime(newGain, ctx.currentTime + 0.05);
 }
 

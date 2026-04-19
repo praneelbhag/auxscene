@@ -13,6 +13,16 @@ export type SoundElement = {
     duration_seconds?: number | null;
     prompt_influence?: number | null;
   };
+  mix?: {
+    start_seconds?: number;
+    gain_db?: number | null;
+    density?: string;
+    role?: string;
+    high_cut_hz?: number | null;
+    low_cut_hz?: number | null;
+    duck_background?: boolean;
+    fade_ms?: number | null;
+  };
   reviewer_notes?: string[];
   cache_key_hint?: string | null;
   cache_hit?: boolean;
@@ -23,6 +33,7 @@ export type SoundElement = {
     issues?: string[];
     suggested_prompt?: string | null;
   } | null;
+  playback_warning?: string | null;
   individual_audio_url?: string;
 };
 

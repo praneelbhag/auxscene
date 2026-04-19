@@ -37,11 +37,13 @@ export default function App() {
       sound_prompt: element.sound_prompt,
       layer: element.layer,
       generation: element.generation,
+      mix: element.mix,
       reviewer_notes: element.reviewer_notes,
       cache_key_hint: element.cache_key_hint,
       cache_hit: element.cache_hit,
       cache_similarity: element.cache_similarity,
       audio_review: element.audio_review,
+      playback_warning: element.playback_warning,
     }));
   }, [generateData]);
 

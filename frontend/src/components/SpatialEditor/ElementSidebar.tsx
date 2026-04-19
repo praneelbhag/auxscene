@@ -11,6 +11,16 @@ interface SidebarElement {
   isPlaying: boolean;
   isRegenerating: boolean;
   sound_prompt?: string;
+  mix?: {
+    start_seconds?: number;
+    gain_db?: number | null;
+    density?: string;
+    role?: string;
+    high_cut_hz?: number | null;
+    low_cut_hz?: number | null;
+    duck_background?: boolean;
+    fade_ms?: number | null;
+  };
   cache_hit?: boolean;
   cache_similarity?: number | null;
   reviewer_notes?: string[];
@@ -20,6 +30,7 @@ interface SidebarElement {
     issues?: string[];
     suggested_prompt?: string | null;
   } | null;
+  playback_warning?: string | null;
 }
 
 interface ElementSidebarProps {
@@ -58,6 +69,13 @@ export function ElementSidebar({
 
           {el.sound_prompt && <p className="sound-prompt-text">{el.sound_prompt}</p>}
 
+          {el.mix && (
+            <p className="mix-script-text">
+              {el.mix.role ?? "texture"} · {el.mix.density ?? "continuous"} ·{" "}
+              {el.mix.gain_db != null ? `${el.mix.gain_db} dB` : "auto gain"}
+            </p>
+          )}
+
           <div className="quality-meta">
             {el.cache_hit && (
               <span>
@@ -69,7 +87,9 @@ export function ElementSidebar({
             )}
           </div>
 
-          {el.audio_review?.issues?.length ? (
+          {el.playback_warning ? (
+            <p className="playback-warning">{el.playback_warning}</p>
+          ) : el.audio_review?.issues?.length ? (
             <p className="review-note">{el.audio_review.issues[0]}</p>
           ) : el.reviewer_notes?.length ? (
             <p className="review-note">{el.reviewer_notes[0]}</p>
