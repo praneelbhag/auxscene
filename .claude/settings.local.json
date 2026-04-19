@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(netstat -ano)",
+      "Bash(powershell -Command \"Stop-Process -Id 25532,22992,18808 -Force -ErrorAction SilentlyContinue\")",
+      "Bash(.venv312/Scripts/python.exe -m uvicorn backend.app.main:app --reload --port 8000)",
+      "Bash(powershell -Command \"Stop-Process -Id 18808,1940,21104,22992,25788,37396 -Force -ErrorAction SilentlyContinue\")",
+      "Bash(echo \"Backend PID: $!\")",
+      "Bash(echo \"Frontend PID: $!\")",
+      "Bash(cat C:\\\\\\\\Users\\\\\\\\vkven\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\c--hookem-spatial-audio\\\\\\\\18bb0fa0-33fb-4b3e-9d7b-a87e6df2a448\\\\\\\\tasks\\\\\\\\bvhqnv9t2.output)",
+      "Bash(powershell -Command ' *)",
+      "Bash(powershell -Command \"netstat -ano | findstr ':8000 '\")"
+    ]
+  }
+}

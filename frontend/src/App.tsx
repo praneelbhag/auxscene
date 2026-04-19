@@ -1,5 +1,7 @@
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { decomposeImage, decomposePrompt, generateScene, regenerateElement } from "./api";
+import { AuthModal } from "./components/AuthModal";
+import { AccountPage } from "./components/AccountPage";
 import { ProcessingView } from "./components/ProcessingView";
 import { ResultView } from "./components/ResultView";
 import { SceneInput } from "./components/SceneInput";
@@ -13,6 +15,10 @@ import type {
   GenerationStatus,
 } from "./types";
 
+const API = "http://localhost:8000/api";
+
+interface AuthUser { id: string; email: string; name: string; }
+
 const statusSteps = ["pending", "generating", "done"] as const;
 
 export default function App() {
@@ -23,6 +29,46 @@ export default function App() {
   const [generateData, setGenerateData] = useState<GenerateResponse | null>(null);
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>({});
   const [error, setError] = useState<string | null>(null);
+
+  // Auth state — persisted to localStorage
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    try { return JSON.parse(localStorage.getItem("ss_user") ?? "null"); } catch { return null; }
+  });
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("ss_token"));
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+
+  const handleAuthSuccess = (u: AuthUser, t: string) => {
+    setUser(u);
+    setToken(t);
+    localStorage.setItem("ss_user", JSON.stringify(u));
+    localStorage.setItem("ss_token", t);
+    setShowAuthModal(false);
+  };
+
+  const handleSignOut = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("ss_user");
+    localStorage.removeItem("ss_token");
+    setShowAccount(false);
+  };
+
+  const saveToHistory = async (generated: GenerateResponse, promptText: string) => {
+    if (!token) return;
+    try {
+      await fetch(`${API}/user/history`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          prompt: promptText,
+          audio_url: generated.audio_url,
+          image_url: generated.image_url ?? null,
+          duration_seconds: generated.duration_seconds ?? null,
+        }),
+      });
+    } catch { /* non-critical */ }
+  };
 
   const appClassName = useMemo(() => `app-shell phase-${phase}`, [phase]);
   const editorElements = useMemo<SpatialElement[]>(() => {
@@ -145,6 +191,7 @@ export default function App() {
         }, {}),
       );
       setGenerateData(generated);
+      void saveToHistory(generated, nextPrompt || (image ? `Image: ${image.name}` : ""));
       setPhase("result");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Scene generation failed.");
@@ -162,6 +209,19 @@ export default function App() {
     setError(null);
   };
 
+  if (showAccount && user && token) {
+    return (
+      <main className="app-shell phase-account">
+        <AccountPage
+          user={user}
+          token={token}
+          onSignOut={handleSignOut}
+          onBack={() => setShowAccount(false)}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className={appClassName}>
       <div className="ambient-grid" aria-hidden="true" />
@@ -170,6 +230,25 @@ export default function App() {
           <span key={index} style={{ "--bar": index } as CSSProperties} />
         ))}
       </div>
+
+      {/* Top-right auth button */}
+      <div className="app-topbar">
+        {user ? (
+          <div className="topbar-user">
+            <button className="topbar-name" type="button" onClick={() => setShowAccount(true)}>
+              {user.name}
+            </button>
+          </div>
+        ) : (
+          <button className="topbar-signin" type="button" onClick={() => setShowAuthModal(true)}>
+            Sign In
+          </button>
+        )}
+      </div>
+
+      {showAuthModal && (
+        <AuthModal onSuccess={handleAuthSuccess} onClose={() => setShowAuthModal(false)} />
+      )}
 
       {phase === "input" && (
         <>
@@ -212,6 +291,7 @@ export default function App() {
           </div>
           <SpatialEditor
             elements={editorElements}
+            sceneDuration={generateData?.duration_seconds ?? 15}
             onRegenerate={handleEditorRegenerate}
             onSave={handleEditorSave}
           />

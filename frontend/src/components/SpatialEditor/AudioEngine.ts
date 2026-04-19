@@ -78,7 +78,7 @@ export async function setupElement(element: {
 
   const audio = new Audio(element.individual_audio_url);
   audio.crossOrigin = "anonymous";
-  audio.loop = true;
+  audio.loop = false;
   audio.preload = "auto";
   audio.volume = 1;
 

@@ -12,9 +12,10 @@ interface DraggableDotProps {
   element: DotElement;
   mapRef: React.RefObject<HTMLDivElement>;
   onDrag: (id: string, x: number, y: number) => void;
+  ghost?: boolean;
 }
 
-export function DraggableDot({ element, mapRef, onDrag }: DraggableDotProps) {
+export function DraggableDot({ element, mapRef, onDrag, ghost = false }: DraggableDotProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -35,20 +36,22 @@ export function DraggableDot({ element, mapRef, onDrag }: DraggableDotProps) {
 
   return (
     <div
-      className={`draggable-dot${isDragging ? " dragging" : ""}`}
+      className={`draggable-dot${isDragging ? " dragging" : ""}${ghost ? " ghost-dot" : ""}`}
       style={{
         left: `${((element.x + 1) / 2) * 100}%`,
         top: `${element.y * 100}%`,
-        background: element.color,
+        background: ghost ? "transparent" : element.color,
+        border: ghost ? `2px dashed ${element.color}` : "none",
+        opacity: ghost ? 0.65 : 1,
         boxShadow: isDragging
           ? `0 0 18px 7px ${element.color}99`
-          : `0 0 8px 3px ${element.color}66`,
+          : ghost ? "none" : `0 0 8px 3px ${element.color}66`,
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
     >
-      <span className="dot-label">{element.label}</span>
+      {!ghost && <span className="dot-label">{element.label}</span>}
     </div>
   );
 }

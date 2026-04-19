@@ -18,17 +18,29 @@ export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLooping, setIsLooping] = useState(false);
+  const [hasEnded, setHasEnded] = useState(false);
   const [volume, setVolume] = useState(0.8);
 
   useEffect(() => {
+    setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(false);
+    setHasEnded(false);
+
     const audio = new Audio(audioUrl);
     audio.preload = "metadata";
     audio.volume = 0.8;
+    audio.loop = isLooping;
     audioRef.current = audio;
 
     const updateTime = () => setCurrentTime(audio.currentTime);
     const updateDuration = () => setDuration(audio.duration || 0);
-    const stopPlayback = () => setIsPlaying(false);
+    const stopPlayback = () => {
+      setIsPlaying(false);
+      setHasEnded(true);
+      setCurrentTime(audio.duration || audio.currentTime);
+    };
 
     audio.addEventListener("timeupdate", updateTime);
     audio.addEventListener("loadedmetadata", updateDuration);
@@ -49,11 +61,25 @@ export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
     }
   }, [volume]);
 
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = isLooping;
+    }
+    if (isLooping) {
+      setHasEnded(false);
+    }
+  }, [isLooping]);
+
   const togglePlay = async () => {
     const audio = audioRef.current;
     if (!audio) return;
 
     if (audio.paused) {
+      if (hasEnded || audio.ended) {
+        audio.currentTime = 0;
+        setCurrentTime(0);
+        setHasEnded(false);
+      }
       await audio.play();
       setIsPlaying(true);
     } else {
@@ -67,6 +93,17 @@ export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
     if (!audio || !duration) return;
     audio.currentTime = Math.max(0, Math.min(duration, nextTime));
     setCurrentTime(audio.currentTime);
+    setHasEnded(false);
+  };
+
+  const resetAudio = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    setCurrentTime(0);
+    setIsPlaying(false);
+    setHasEnded(false);
   };
 
   return (
@@ -95,6 +132,19 @@ export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
           {formatTime(currentTime)} / {formatTime(duration)}
         </span>
       </div>
+      <button
+        aria-pressed={isLooping}
+        className={`audio-loop-button${isLooping ? " active" : ""}`}
+        onClick={() => setIsLooping((current) => !current)}
+        type="button"
+      >
+        {isLooping ? "Loop On" : "Loop Scene"}
+      </button>
+      {hasEnded && !isLooping && (
+        <button className="audio-reset-button" onClick={resetAudio} type="button">
+          Reset
+        </button>
+      )}
       <label className="volume-control">
         <VolumeIcon />
         <input

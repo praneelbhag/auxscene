@@ -6,8 +6,11 @@ from backend.pipeline.router import router as pipeline_router
 
 from .audio.router import router as audio_router
 from .config import get_settings
+from .database import init_db
+from .user_router import router as user_router
 
 settings = get_settings()
+init_db()
 
 app = FastAPI(
     title="SoundScene API",
@@ -24,6 +27,7 @@ app.add_middleware(
 )
 
 app.include_router(pipeline_router)
+app.include_router(user_router)
 settings.output_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static/outputs", StaticFiles(directory=settings.output_dir), name="static-outputs")
 app.include_router(audio_router)

@@ -13,6 +13,7 @@ import {
   updateElementVolume,
 } from "./AudioEngine";
 import { SpatialMap } from "./SpatialMap";
+import { TimelineEditor } from "./TimelineEditor";
 import type { Layer } from "../../types";
 import "./SpatialEditor.css";
 
@@ -79,15 +80,24 @@ interface InternalElement extends SpatialElement {
   volumeOverride: number;
   isPlaying: boolean;
   isRegenerating: boolean;
+  clipStart: number;
+  clipEnd: number;
+  fadeEnabled: boolean;
+  automationEnabled: boolean;
+  autoStart: number;
+  autoEnd: number;
+  endX: number;
+  endY: number;
 }
 
 interface SpatialEditorProps {
   elements: SpatialElement[];
+  sceneDuration?: number;
   onSave?: (elements: SpatialElement[]) => void;
   onRegenerate?: (element: SpatialElement, editInstruction: string) => Promise<SpatialElement>;
 }
 
-function makeInternalElements(elements: SpatialElement[]): InternalElement[] {
+function makeInternalElements(elements: SpatialElement[], sceneDuration: number): InternalElement[] {
   return elements.map((element, index) => ({
     ...element,
     color: COLORS[index % COLORS.length],
@@ -96,21 +106,35 @@ function makeInternalElements(elements: SpatialElement[]): InternalElement[] {
     volumeOverride: 1,
     isPlaying: false,
     isRegenerating: false,
+    clipStart: element.mix?.start_seconds ?? 0,
+    clipEnd: sceneDuration,
+    fadeEnabled: false,
+    automationEnabled: false,
+    autoStart: element.mix?.start_seconds ?? 0,
+    autoEnd: sceneDuration,
+    endX: element.x,
+    endY: element.y,
   }));
 }
 
 function toSpatialElements(elements: InternalElement[]): SpatialElement[] {
-  return elements.map(({ color, muted, solo, volumeOverride, isPlaying, isRegenerating, ...element }) => element);
+  return elements.map(({
+    color, muted, solo, volumeOverride, isPlaying, isRegenerating,
+    clipStart, clipEnd, fadeEnabled, automationEnabled, autoStart, autoEnd, endX, endY,
+    ...element
+  }) => element);
 }
 
 export default function SpatialEditor({
   elements: initialElements,
+  sceneDuration = 15,
   onRegenerate,
   onSave,
 }: SpatialEditorProps) {
   const [elements, setElements] = useState<InternalElement[]>(() =>
-    makeInternalElements(initialElements),
+    makeInternalElements(initialElements, sceneDuration),
   );
+  const [exportingStems, setExportingStems] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [headphoneMode, setHeadphoneMode] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -143,15 +167,53 @@ export default function SpatialEditor({
         .find((nodes) => nodes && !nodes.audio.paused);
 
       if (active) {
-        setTimelineTime(active.audio.currentTime);
+        const t = active.audio.currentTime;
+        setTimelineTime(t);
         if (Number.isFinite(active.audio.duration)) {
           setTimelineDuration(active.audio.duration);
         }
+
+        // Apply automation lerp and fade volume per element
+        elementsRef.current.forEach((el) => {
+          const nodes = audioNodesRef.current[el.id];
+          if (!nodes) return;
+
+          // Automation position lerp over user-defined interval
+          if (el.automationEnabled) {
+            const rangeLen = el.autoEnd - el.autoStart;
+            if (rangeLen > 0) {
+              const progress = Math.min(1, Math.max(0, (t - el.autoStart) / rangeLen));
+              updateElementPosition(
+                nodes,
+                el.x + (el.endX - el.x) * progress,
+                el.y + (el.endY - el.y) * progress,
+              );
+            }
+          }
+
+          // Fade volume
+          const fadeDur = el.fadeEnabled ? 1.0 : 0;
+          const tInClip = t - el.clipStart;
+          let fadeScale = 1;
+          if (fadeDur > 0 && tInClip < fadeDur) {
+            fadeScale = Math.max(0, tInClip / fadeDur);
+          }
+          const timeUntilEnd = el.clipEnd - t;
+          if (fadeDur > 0 && timeUntilEnd < fadeDur) {
+            fadeScale = Math.min(fadeScale, Math.max(0, timeUntilEnd / fadeDur));
+          }
+          if (fadeScale < 1) {
+            const anySolo = elementsRef.current.some((e) => e.solo);
+            const effective = el.muted ? 0 : (anySolo && !el.solo ? 0 : el.volumeOverride * fadeScale);
+            const ctx = nodes.muteGain.context;
+            nodes.muteGain.gain.setTargetAtTime(effective, ctx.currentTime, 0.05);
+          }
+        });
       }
     }, 200);
 
     return () => window.clearInterval(timer);
-  }, [isPlaying]);
+  }, [isPlaying, sceneDuration]);
 
   useEffect(() => {
     return () => {
@@ -404,10 +466,58 @@ export default function SpatialEditor({
     Object.values(audioNodesRef.current).forEach((nodes) => seekElement(nodes, nextTime));
   };
 
+  const handleClipChange = useCallback((id: string, changes: Partial<{ clipStart: number; clipEnd: number; autoStart: number; autoEnd: number }>) => {
+    setElements((current) => current.map((el) => el.id === id ? { ...el, ...changes } : el));
+  }, []);
+
+  const handleAutomationToggle = useCallback((id: string) => {
+    setElements((current) =>
+      current.map((el) => el.id === id ? { ...el, automationEnabled: !el.automationEnabled } : el),
+    );
+  }, []);
+
+  const handleFadeToggle = useCallback((id: string) => {
+    setElements((current) =>
+      current.map((el) => el.id === id ? { ...el, fadeEnabled: !el.fadeEnabled } : el),
+    );
+  }, []);
+
+  const handleAutomationDrag = useCallback((id: string, newX: number, newY: number) => {
+    setElements((current) => current.map((el) => el.id === id ? { ...el, endX: newX, endY: newY } : el));
+  }, []);
+
+  const handleExportStems = async () => {
+    setExportingStems(true);
+    for (const el of elementsRef.current) {
+      try {
+        const response = await fetch(el.individual_audio_url);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${el.label.replace(/\s+/g, "_").toLowerCase()}.wav`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        await new Promise((r) => setTimeout(r, 400));
+      } catch {
+        // skip failed element
+      }
+    }
+    setExportingStems(false);
+  };
+
+  const effectiveDuration = timelineDuration || sceneDuration;
+
   return (
     <div className="spatial-editor">
       <div className="editor-main">
-        <SpatialMap elements={elements} onDrag={handleDrag} />
+        <SpatialMap
+          elements={elements}
+          onDrag={handleDrag}
+          onAutomationDrag={handleAutomationDrag}
+        />
         <ElementSidebar
           elements={elements}
           onReverbChange={handleReverbChange}
@@ -416,6 +526,8 @@ export default function SpatialEditor({
           onSoloToggle={handleSoloToggle}
           onPlayToggle={handleElementPlayToggle}
           onRegenerate={handleRegenerate}
+          onAutomationToggle={handleAutomationToggle}
+          onFadeToggle={handleFadeToggle}
           headphoneMode={headphoneMode}
           onHeadphoneToggle={() => setHeadphoneMode((value) => !value)}
         />
@@ -423,39 +535,55 @@ export default function SpatialEditor({
 
       {loadError && <p className="load-error">{loadError}</p>}
 
-      <div className="editor-timeline">
-        <input
-          aria-label="Editor playback position"
-          disabled={!timelineDuration}
-          max={timelineDuration || 0}
-          min={0}
-          onChange={(event) => handleTimelineChange(Number(event.target.value))}
-          step={0.01}
-          type="range"
-          value={Math.min(timelineTime, timelineDuration || 0)}
-        />
-        <span>
-          {formatTime(timelineTime)} / {formatTime(timelineDuration)}
-        </span>
-      </div>
+      <TimelineEditor
+        clips={elements.map((el) => ({
+          id: el.id,
+          label: el.label,
+          color: el.color,
+          clipStart: el.clipStart,
+          clipEnd: Math.min(el.clipEnd, effectiveDuration),
+          automationEnabled: el.automationEnabled,
+          autoStart: Math.max(el.clipStart, el.autoStart),
+          autoEnd: Math.min(Math.min(el.clipEnd, effectiveDuration), el.autoEnd),
+        }))}
+        duration={effectiveDuration}
+        playheadTime={timelineTime}
+        onClipChange={handleClipChange}
+        onSeek={handleTimelineChange}
+      />
 
       <div className="editor-controls">
-        {!isPlaying ? (
-          <button className="control-btn play-btn" onClick={handlePlay} type="button">
-            Play All
+        <div className="controls-left">
+          {!isPlaying ? (
+            <button className="control-btn play-btn" onClick={handlePlay} type="button">
+              ▶ Play All
+            </button>
+          ) : (
+            <button className="control-btn pause-btn" onClick={handlePause} type="button">
+              ⏸ Pause
+            </button>
+          )}
+          <span className="playhead-time">
+            {formatTime(timelineTime)} / {formatTime(effectiveDuration)}
+          </span>
+        </div>
+        <div className="controls-right">
+          <button className="control-btn reset-btn" onClick={handleReset} type="button">
+            Reset Positions
           </button>
-        ) : (
-          <button className="control-btn pause-btn" onClick={handlePause} type="button">
-            Pause All
+          <button className="control-btn save-btn" onClick={handleSave} type="button">
+            Save Mix
           </button>
-        )}
-        <button className="control-btn reset-btn" onClick={handleReset} type="button">
-          Reset Positions
-        </button>
-        <button className="control-btn save-btn" onClick={handleSave} type="button">
-          Save Mix
-        </button>
-        {saveMessage && <span className="save-message">{saveMessage}</span>}
+          <button
+            className="control-btn export-btn"
+            onClick={handleExportStems}
+            disabled={exportingStems}
+            type="button"
+          >
+            {exportingStems ? "Exporting…" : "Export Stems"}
+          </button>
+          {saveMessage && <span className="save-message">{saveMessage}</span>}
+        </div>
       </div>
     </div>
   );

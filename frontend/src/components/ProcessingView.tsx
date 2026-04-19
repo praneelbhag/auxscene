@@ -40,26 +40,6 @@ export function ProcessingView({
           </p>
         </div>
 
-        {decomposeData?.is_abstract && (
-          <div className="pipeline-panel search-panel">
-            <div className="panel-heading">
-              <span>Grounding</span>
-              <i />
-            </div>
-            <div className="search-results">
-              {decomposeData.grounding_sources.map((source, index) => (
-                <p
-                  className="search-line"
-                  key={`${source}-${index}`}
-                  style={{ "--delay": `${index * 160}ms` } as CSSProperties}
-                >
-                  {source}
-                </p>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="pipeline-panel elements-panel">
           <div className="panel-heading">
             <span>Scene Elements</span>
@@ -69,9 +49,11 @@ export function ProcessingView({
             <ElementList animated elements={elements} />
           ) : (
             <div className="element-skeletons">
-              <span />
-              <span />
-              <span />
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="skeleton-block" style={{ "--i": i } as CSSProperties}>
+                  <span className="skeleton-label">Analyzing scene…</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -101,6 +83,7 @@ export function ProcessingView({
 
         <div className="image-skeleton" aria-label="Generated image loading">
           <div className="image-skeleton-wave" />
+          <span className="image-skeleton-label">Generating scene image…</span>
         </div>
       </div>
     </section>

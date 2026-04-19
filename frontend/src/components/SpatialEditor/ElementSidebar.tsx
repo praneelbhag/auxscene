@@ -10,6 +10,8 @@ interface SidebarElement {
   solo: boolean;
   isPlaying: boolean;
   isRegenerating: boolean;
+  automationEnabled?: boolean;
+  fadeEnabled?: boolean;
   sound_prompt?: string;
   mix?: {
     start_seconds?: number;
@@ -41,6 +43,8 @@ interface ElementSidebarProps {
   onSoloToggle: (id: string) => void;
   onPlayToggle: (id: string) => void;
   onRegenerate: (id: string, editInstruction: string) => void;
+  onAutomationToggle: (id: string) => void;
+  onFadeToggle: (id: string) => void;
   headphoneMode: boolean;
   onHeadphoneToggle: () => void;
 }
@@ -53,10 +57,13 @@ export function ElementSidebar({
   onSoloToggle,
   onPlayToggle,
   onRegenerate,
+  onAutomationToggle,
+  onFadeToggle,
   headphoneMode,
   onHeadphoneToggle,
 }: ElementSidebarProps) {
   const [edits, setEdits] = useState<Record<string, string>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   return (
     <div className="element-sidebar">
@@ -65,61 +72,45 @@ export function ElementSidebar({
           <div className="sidebar-element-header">
             <span className="sidebar-dot" style={{ background: el.color }} />
             <span className="sidebar-label">{el.label}</span>
+            {el.mix && (
+              <span className="sidebar-role">{el.mix.role ?? "texture"}</span>
+            )}
           </div>
 
-          {el.sound_prompt && <p className="sound-prompt-text">{el.sound_prompt}</p>}
-
-          {el.mix && (
-            <p className="mix-script-text">
-              {el.mix.role ?? "texture"} · {el.mix.density ?? "continuous"} ·{" "}
-              {el.mix.gain_db != null ? `${el.mix.gain_db} dB` : "auto gain"}
-            </p>
+          {el.sound_prompt && (
+            <p className="sound-prompt-text">{el.sound_prompt}</p>
           )}
 
-          <div className="quality-meta">
-            {el.cache_hit && (
-              <span>
-                Cache hit{el.cache_similarity ? ` ${(el.cache_similarity * 100).toFixed(0)}%` : ""}
-              </span>
-            )}
-            {el.audio_review?.score != null && (
-              <span>Review {(el.audio_review.score * 100).toFixed(0)}%</span>
-            )}
+          <div className="vsliders-row">
+            <div className="vslider-group">
+              <span className="vslider-value">{el.reverb.toFixed(2)}</span>
+              <input
+                type="range"
+                className="vslider"
+                min={0}
+                max={1}
+                step={0.01}
+                value={el.reverb}
+                onChange={(e) => onReverbChange(el.id, parseFloat(e.target.value))}
+                aria-label="Reverb"
+              />
+              <span className="vslider-name">Reverb</span>
+            </div>
+            <div className="vslider-group">
+              <span className="vslider-value">{el.volumeOverride.toFixed(2)}</span>
+              <input
+                type="range"
+                className="vslider"
+                min={0}
+                max={1}
+                step={0.01}
+                value={el.volumeOverride}
+                onChange={(e) => onVolumeChange(el.id, parseFloat(e.target.value))}
+                aria-label="Volume"
+              />
+              <span className="vslider-name">Vol</span>
+            </div>
           </div>
-
-          {el.playback_warning ? (
-            <p className="playback-warning">{el.playback_warning}</p>
-          ) : el.audio_review?.issues?.length ? (
-            <p className="review-note">{el.audio_review.issues[0]}</p>
-          ) : el.reviewer_notes?.length ? (
-            <p className="review-note">{el.reviewer_notes[0]}</p>
-          ) : null}
-
-          <label className="slider-label">
-            Reverb
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={el.reverb}
-              onChange={(e) => onReverbChange(el.id, parseFloat(e.target.value))}
-            />
-            <span className="slider-value">{el.reverb.toFixed(2)}</span>
-          </label>
-
-          <label className="slider-label">
-            Vol
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={el.volumeOverride}
-              onChange={(e) => onVolumeChange(el.id, parseFloat(e.target.value))}
-            />
-            <span className="slider-value">{el.volumeOverride.toFixed(2)}</span>
-          </label>
 
           <div className="sidebar-toggles">
             <button
@@ -145,24 +136,53 @@ export function ElementSidebar({
             </button>
           </div>
 
-          <label className="edit-label">
-            Refine
-            <textarea
-              placeholder="heavier rain, less birds, more distant..."
-              value={edits[el.id] ?? ""}
-              onChange={(event) =>
-                setEdits((current) => ({ ...current, [el.id]: event.target.value }))
-              }
-            />
-          </label>
-          <button
-            className="regenerate-btn"
-            disabled={el.isRegenerating || !(edits[el.id] ?? "").trim()}
-            onClick={() => onRegenerate(el.id, (edits[el.id] ?? "").trim())}
-            type="button"
-          >
-            {el.isRegenerating ? "Regenerating..." : "Regenerate Sound"}
-          </button>
+          <div className="sidebar-actions">
+            <button
+              className={`toggle-btn automation-btn${el.automationEnabled ? " active" : ""}`}
+              type="button"
+              title="Animate spatial position over time"
+              onClick={() => onAutomationToggle(el.id)}
+            >
+              {el.automationEnabled ? "Path On" : "Animate"}
+            </button>
+            <button
+              className={`toggle-btn fade-btn${el.fadeEnabled ? " active" : ""}`}
+              type="button"
+              title="Apply 1s fade in and fade out"
+              onClick={() => onFadeToggle(el.id)}
+            >
+              Fade
+            </button>
+            <button
+              className="refine-toggle"
+              type="button"
+              onClick={() => setExpanded((s) => ({ ...s, [el.id]: !s[el.id] }))}
+            >
+              {expanded[el.id] ? "▲ Refine" : "▼ Refine"}
+            </button>
+          </div>
+
+          {expanded[el.id] && (
+            <>
+              <label className="edit-label">
+                <textarea
+                  placeholder="heavier rain, less birds, more distant..."
+                  value={edits[el.id] ?? ""}
+                  onChange={(event) =>
+                    setEdits((current) => ({ ...current, [el.id]: event.target.value }))
+                  }
+                />
+              </label>
+              <button
+                className="regenerate-btn"
+                disabled={el.isRegenerating || !(edits[el.id] ?? "").trim()}
+                onClick={() => onRegenerate(el.id, (edits[el.id] ?? "").trim())}
+                type="button"
+              >
+                {el.isRegenerating ? "Regenerating..." : "Regenerate Sound"}
+              </button>
+            </>
+          )}
         </div>
       ))}
 
