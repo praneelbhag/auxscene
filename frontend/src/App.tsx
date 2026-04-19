@@ -18,6 +18,7 @@ const statusSteps = ["pending", "generating", "done"] as const;
 export default function App() {
   const [phase, setPhase] = useState<AppPhase>("input");
   const [prompt, setPrompt] = useState("");
+  const [sceneDurationSeconds, setSceneDurationSeconds] = useState(15);
   const [decomposeData, setDecomposeData] = useState<DecomposeResponse | null>(null);
   const [generateData, setGenerateData] = useState<GenerateResponse | null>(null);
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>({});
@@ -111,8 +112,9 @@ export default function App() {
     return () => timers.forEach(window.clearTimeout);
   }, [decomposeData, phase]);
 
-  const handleSubmit = async (nextPrompt: string) => {
+  const handleSubmit = async (nextPrompt: string, nextDurationSeconds: number) => {
     setPrompt(nextPrompt);
+    setSceneDurationSeconds(nextDurationSeconds);
     setError(null);
     setDecomposeData(null);
     setGenerateData(null);
@@ -129,7 +131,7 @@ export default function App() {
         }, {}),
       );
 
-      const generated = await generateScene(decomposed);
+      const generated = await generateScene(decomposed, nextDurationSeconds);
       setGenerationStatus(
         decomposed.elements.reduce<GenerationStatus>((statuses, element) => {
           statuses[element.id] = "done";
@@ -147,6 +149,7 @@ export default function App() {
   const resetScene = () => {
     setPhase("input");
     setPrompt("");
+    setSceneDurationSeconds(15);
     setDecomposeData(null);
     setGenerateData(null);
     setGenerationStatus({});
@@ -173,7 +176,7 @@ export default function App() {
         <ProcessingView
           decomposeData={decomposeData}
           generationStatus={generationStatus}
-          prompt={prompt}
+          prompt={`${prompt} · ${sceneDurationSeconds}s`}
         />
       )}
 

@@ -73,6 +73,13 @@ def _element_start(element: SceneElement) -> float:
     return element.mix.start_seconds
 
 
+def _element_render_duration(element: SceneElement, scene_duration: float) -> float:
+    remaining = scene_duration - _element_start(element)
+    if remaining <= 0:
+        return 0.5
+    return min(_element_duration(element, scene_duration), remaining)
+
+
 async def _get_or_generate_audio_bytes(
     *,
     element: SceneElement,
@@ -160,6 +167,24 @@ def _apply_reviewer_suggestion(
     return SceneElement.model_validate(data)
 
 
+def _apply_audible_retry(element: SceneElement) -> SceneElement:
+    data = element.model_dump()
+    data["sound_prompt"] = (
+        f"Audible clear isolated stem, natural field recording: {element.sound_prompt}. "
+        "Present but not loud, no silence, no music, no speech."
+    )
+    data["cache_key_hint"] = None
+    mix = data.setdefault("mix", {})
+    current_gain = mix.get("gain_db")
+    target_gain = -14.0 if element.layer == "background" else -11.0 if element.layer == "midground" else -8.0
+    mix["gain_db"] = max(float(current_gain), target_gain) if current_gain is not None else target_gain
+    data["reviewer_notes"] = [
+        *element.reviewer_notes,
+        "Near-silent generation detected; retried with an audible isolated-stem prompt.",
+    ]
+    return SceneElement.model_validate(data)
+
+
 async def _render_element(
     *,
     element: SceneElement,
@@ -184,18 +209,35 @@ async def _render_element(
         duration_seconds=duration_seconds,
     )
     playback_warning = _playback_warning(processed, element)
+    response_element = element
+
+    if playback_warning and not cache_hit:
+        response_element = _apply_audible_retry(element)
+        audio_bytes, cache_hit, cache_similarity = await _get_or_generate_audio_bytes(
+            element=response_element,
+            duration_seconds=duration_seconds,
+            client=client,
+            save_cache=False,
+        )
+        processed, elem_file = _process_element_audio(
+            element=response_element,
+            audio_bytes=audio_bytes,
+            output_dir=output_dir,
+            job_id=job_id,
+            duration_seconds=duration_seconds,
+        )
+        playback_warning = _playback_warning(processed, response_element)
 
     audio_review: AudioReview | None = None
     if not cache_hit:
         audio_review = await review_audio_file(
             audio_path=elem_file,
-            element=element,
+            element=response_element,
             settings=settings,
         )
-    response_element = element
 
     if _should_retry_after_review(audio_review):
-        response_element = _apply_reviewer_suggestion(element, audio_review)
+        response_element = _apply_reviewer_suggestion(response_element, audio_review)
         audio_bytes, cache_hit, cache_similarity = await _get_or_generate_audio_bytes(
             element=response_element,
             duration_seconds=duration_seconds,
@@ -218,7 +260,7 @@ async def _render_element(
                 settings=settings,
             )
 
-    if defer_cache_save and not cache_hit:
+    if defer_cache_save and not cache_hit and not playback_warning:
         save_cached_audio(response_element, settings, duration_seconds, audio_bytes)
 
     return processed, GenerateElementResponse(
@@ -270,15 +312,7 @@ async def generate_scene(payload: GenerateRequest, request: Request) -> Generate
     job_state = JobState(status="running", total_elements=len(payload.elements))
     _JOB_STATUS[job_id] = job_state
     output_dir = _ensure_output_dir()
-    duration = max(
-        [
-            payload.duration_seconds,
-            *[
-                _element_start(element) + _element_duration(element, payload.duration_seconds)
-                for element in payload.elements
-            ],
-        ]
-    )
+    duration = payload.duration_seconds
     scene_stem = f"scene_{job_id}"
 
     try:
@@ -298,7 +332,7 @@ async def generate_scene(payload: GenerateRequest, request: Request) -> Generate
                         request=request,
                         output_dir=output_dir,
                         job_id=job_id,
-                        duration_seconds=_element_duration(element, payload.duration_seconds),
+                        duration_seconds=_element_render_duration(element, duration),
                         client=client,
                     )
                 )

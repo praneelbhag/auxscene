@@ -53,6 +53,8 @@ Rules:
 - Prefer realistic field-recording language unless the user asks for stylized sound.
 - Keep natural environments gentle and balanced: avoid words like loud, sharp, intense, cinematic, massive, or dramatic unless requested.
 - For background beds, include quiet/subtle/distant language so they support the scene instead of dominating it.
+- Do not over-soften the actual ElevenLabs prompt with phrases like "very subtle", "barely audible", "low-intensity", or "muted"; use gain_db/high_cut_hz for mix placement instead.
+- Every sound_prompt must describe an audible source. Distance and softness are mix decisions, not silence.
 - Add useful negative constraints like "no speech" or "no music" when appropriate.
 - For ambience/background beds, set loop=true and duration_seconds 8-20.
 - For point/foreground one-shots, set loop=false and duration_seconds 1-6.

@@ -46,12 +46,14 @@ export async function decomposePrompt(prompt: string): Promise<DecomposeResponse
 
 export async function generateScene(
   decomposeData: DecomposeResponse,
+  durationSeconds?: number,
 ): Promise<GenerateResponse> {
   if (useMocks) {
     await wait(2200);
     const mock = generateMock as GenerateResponse;
     return {
       ...mock,
+      duration_seconds: durationSeconds ?? mock.duration_seconds,
       elements: decomposeData.elements.map((element, index) => ({
         ...element,
         individual_audio_url:
@@ -60,7 +62,10 @@ export async function generateScene(
     };
   }
 
-  return postJson<GenerateResponse>("/api/generate", decomposeData);
+  return postJson<GenerateResponse>("/api/generate", {
+    ...decomposeData,
+    duration_seconds: durationSeconds,
+  });
 }
 
 export async function regenerateElement(

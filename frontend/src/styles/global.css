@@ -224,12 +224,18 @@ p { margin-top: 0; }
   transition: border-color 0.2s ease;
 }
 
+.prompt-fields {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-xs);
+}
+
 .prompt-form:focus-within {
   border-color: var(--border-strong);
 }
 
 .prompt-form textarea {
-  flex: 1;
   min-width: 0;
   resize: none;
   border: 0;
@@ -244,6 +250,36 @@ p { margin-top: 0; }
 
 .prompt-form textarea {
   height: 68px;
+}
+
+.duration-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-lg) var(--space-sm);
+  color: var(--text-2);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.duration-field span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+
+.duration-field input {
+  width: 72px;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--button-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .prompt-form .primary-action {

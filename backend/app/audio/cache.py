@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import numpy as np
+
 from backend.app.config import Settings
 
 from .schemas import SceneElement
@@ -33,7 +35,12 @@ def get_cached_audio(element: SceneElement, settings: Settings, duration_seconds
         if exact:
             path = settings.audio_cache_dir / exact["filename"]
             if path.exists():
-                return CachedAudio(audio_bytes=path.read_bytes(), cache_hit=True, similarity=1.0)
+                audio_bytes = path.read_bytes()
+                if _is_near_silent_pcm(audio_bytes, settings.elevenlabs_output_format):
+                    _remove_cache_entry(index, exact_key, settings.audio_cache_dir)
+                    _save_index(settings.audio_cache_dir, index)
+                else:
+                    return CachedAudio(audio_bytes=audio_bytes, cache_hit=True, similarity=1.0)
 
         similar_key, similarity = _find_similar_key(
             element,
@@ -45,7 +52,12 @@ def get_cached_audio(element: SceneElement, settings: Settings, duration_seconds
         if similar_key:
             path = settings.audio_cache_dir / index[similar_key]["filename"]
             if path.exists():
-                return CachedAudio(audio_bytes=path.read_bytes(), cache_hit=True, similarity=similarity)
+                audio_bytes = path.read_bytes()
+                if _is_near_silent_pcm(audio_bytes, settings.elevenlabs_output_format):
+                    _remove_cache_entry(index, similar_key, settings.audio_cache_dir)
+                    _save_index(settings.audio_cache_dir, index)
+                else:
+                    return CachedAudio(audio_bytes=audio_bytes, cache_hit=True, similarity=similarity)
 
     return None
 
@@ -57,6 +69,8 @@ def save_cached_audio(
     audio_bytes: bytes,
 ) -> None:
     if not settings.audio_cache_enabled:
+        return
+    if _is_near_silent_pcm(audio_bytes, settings.elevenlabs_output_format):
         return
 
     settings.audio_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -166,3 +180,25 @@ def _load_index(cache_dir: Path) -> dict[str, dict]:
 def _save_index(cache_dir: Path, index: dict[str, dict]) -> None:
     path = cache_dir / "index.json"
     path.write_text(json.dumps(index, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def _remove_cache_entry(index: dict[str, dict], key: str, cache_dir: Path) -> None:
+    entry = index.pop(key, None)
+    if not entry:
+        return
+    filename = entry.get("filename")
+    if filename:
+        (cache_dir / str(filename)).unlink(missing_ok=True)
+
+
+def _is_near_silent_pcm(audio_bytes: bytes, output_format: str) -> bool:
+    if not output_format.startswith("pcm_") or not audio_bytes:
+        return False
+
+    samples = np.frombuffer(audio_bytes, dtype="<i2").astype(np.float32) / 32768.0
+    if samples.size == 0:
+        return True
+
+    rms = float(np.sqrt(np.mean(samples * samples)))
+    peak = float(np.max(np.abs(samples)))
+    return peak < 0.003 or rms < 10 ** (-58.0 / 20.0)
