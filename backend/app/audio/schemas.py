@@ -45,7 +45,7 @@ class GenerateRequest(BaseModel):
     original_prompt: str
     concrete_description: str
     elements: list[SceneElement]
-    duration_seconds: float = Field(default=15.0, ge=1.0, le=30.0)
+    duration_seconds: float = Field(default=15.0, ge=1.0, le=180.0)
 
 
 class GenerateElementResponse(BaseModel):

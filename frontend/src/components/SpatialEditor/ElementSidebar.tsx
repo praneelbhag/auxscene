@@ -191,7 +191,7 @@ export function ElementSidebar({
         onClick={onHeadphoneToggle}
         type="button"
       >
-        {headphoneMode ? "Headphone Mode On" : "Headphone Mode"}
+        {headphoneMode ? "Headphones Recommended" : "Headphones Recommended"}
       </button>
       {headphoneMode && (
         <p className="headphone-reminder">
