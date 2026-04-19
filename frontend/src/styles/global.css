@@ -265,6 +265,43 @@ p { margin-top: 0; }
   text-transform: uppercase;
 }
 
+.image-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-lg);
+  color: var(--text-2);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.image-field input {
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  pointer-events: none;
+}
+
+.image-field span {
+  min-width: 0;
+  max-width: 280px;
+  overflow: hidden;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--button-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .duration-field span {
   display: inline-flex;
   align-items: center;

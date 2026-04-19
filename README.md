@@ -55,6 +55,8 @@ Each element also carries generation hints (`duration_seconds`, `prompt_influenc
 
 The fuller audio architecture is documented in [`docs/audio-pipeline.md`](docs/audio-pipeline.md).
 
+`POST /api/decompose-image` accepts a PNG, JPEG, or WebP frame plus optional direction. Gemini analyzes visible objects, spatial regions, implied foley, and scene vibe, then returns the same `DecomposeResponse` contract as text prompts so the audio generation path stays identical.
+
 ## Provider Map
 
 | Feature | Dependency | Env |

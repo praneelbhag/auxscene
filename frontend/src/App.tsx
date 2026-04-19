@@ -1,5 +1,5 @@
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
-import { decomposePrompt, generateScene, regenerateElement } from "./api";
+import { decomposeImage, decomposePrompt, generateScene, regenerateElement } from "./api";
 import { ProcessingView } from "./components/ProcessingView";
 import { ResultView } from "./components/ResultView";
 import { SceneInput } from "./components/SceneInput";
@@ -112,8 +112,12 @@ export default function App() {
     return () => timers.forEach(window.clearTimeout);
   }, [decomposeData, phase]);
 
-  const handleSubmit = async (nextPrompt: string, nextDurationSeconds: number) => {
-    setPrompt(nextPrompt);
+  const handleSubmit = async (
+    nextPrompt: string,
+    nextDurationSeconds: number,
+    image?: File | null,
+  ) => {
+    setPrompt(nextPrompt || (image ? `Image: ${image.name}` : ""));
     setSceneDurationSeconds(nextDurationSeconds);
     setError(null);
     setDecomposeData(null);
@@ -122,7 +126,9 @@ export default function App() {
     setPhase("processing");
 
     try {
-      const decomposed = await decomposePrompt(nextPrompt);
+      const decomposed = image
+        ? await decomposeImage(image, nextPrompt)
+        : await decomposePrompt(nextPrompt);
       setDecomposeData(decomposed);
       setGenerationStatus(
         decomposed.elements.reduce<GenerationStatus>((statuses, element) => {
@@ -176,7 +182,7 @@ export default function App() {
         <ProcessingView
           decomposeData={decomposeData}
           generationStatus={generationStatus}
-          prompt={`${prompt} · ${sceneDurationSeconds}s`}
+          prompt={`${prompt} - ${sceneDurationSeconds}s`}
         />
       )}
 

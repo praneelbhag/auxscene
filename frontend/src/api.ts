@@ -33,6 +33,30 @@ async function postJson<TResponse>(path: string, body: unknown): Promise<TRespon
   return response.json() as Promise<TResponse>;
 }
 
+async function postForm<TResponse>(path: string, body: FormData): Promise<TResponse> {
+  const requestUrl = `${apiBaseUrl}${path}`;
+
+  let response: Response;
+  try {
+    response = await fetch(requestUrl, {
+      method: "POST",
+      body,
+    });
+  } catch (error) {
+    throw new Error(
+      `Could not reach the backend at ${requestUrl}. Make sure FastAPI is running on port 8000.`,
+      { cause: error },
+    );
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Request failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<TResponse>;
+}
+
 export async function decomposePrompt(prompt: string): Promise<DecomposeResponse> {
   if (useMocks) {
     await wait(700);
@@ -42,6 +66,33 @@ export async function decomposePrompt(prompt: string): Promise<DecomposeResponse
   }
 
   return postJson<DecomposeResponse>("/api/decompose", { prompt });
+}
+
+export async function decomposeImage(
+  image: File,
+  prompt?: string,
+): Promise<DecomposeResponse> {
+  if (useMocks) {
+    await wait(900);
+    return {
+      ...(decomposeMock as DecomposeResponse),
+      original_prompt: prompt?.trim() || `image input: ${image.name}`,
+      concrete_description:
+        prompt?.trim() ||
+        "A visually analyzed animation frame with ambience, foley details, and spatial sound sources.",
+      grounding_sources: [
+        "Frame analysis: visible objects, surfaces, foreground/background regions",
+        "Sonic vibe: ambience bed, foley details, spatial point sources",
+      ],
+    };
+  }
+
+  const form = new FormData();
+  form.append("image", image);
+  if (prompt?.trim()) {
+    form.append("prompt", prompt.trim());
+  }
+  return postForm<DecomposeResponse>("/api/decompose-image", form);
 }
 
 export async function generateScene(

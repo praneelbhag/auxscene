@@ -4,17 +4,18 @@ const examples = ["rainy Tokyo street", "peace and serenity", "busy coffee shop"
 
 type SceneInputProps = {
   disabled?: boolean;
-  onSubmit: (prompt: string, durationSeconds: number) => void;
+  onSubmit: (prompt: string, durationSeconds: number, image?: File | null) => void;
 };
 
 export function SceneInput({ disabled = false, onSubmit }: SceneInputProps) {
   const [prompt, setPrompt] = useState("");
   const [durationSeconds, setDurationSeconds] = useState(15);
+  const [image, setImage] = useState<File | null>(null);
 
   const submitPrompt = (value: string) => {
     const trimmed = value.trim();
-    if (!trimmed || disabled) return;
-    onSubmit(trimmed, durationSeconds);
+    if ((!trimmed && !image) || disabled) return;
+    onSubmit(trimmed, durationSeconds, image);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -41,9 +42,20 @@ export function SceneInput({ disabled = false, onSubmit }: SceneInputProps) {
             value={prompt}
             disabled={disabled}
             onChange={(event) => setPrompt(event.target.value)}
-            placeholder="Describe a scene..."
+            placeholder="Describe a scene or add direction for an uploaded frame..."
             rows={2}
           />
+          <label className="image-field" htmlFor="scene-image">
+            Frame
+            <input
+              id="scene-image"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={disabled}
+              onChange={(event) => setImage(event.target.files?.[0] ?? null)}
+            />
+            <span>{image ? image.name : "Upload PNG, JPEG, or WebP"}</span>
+          </label>
           <label className="duration-field" htmlFor="scene-duration">
             Length
             <span>
@@ -65,7 +77,7 @@ export function SceneInput({ disabled = false, onSubmit }: SceneInputProps) {
             </span>
           </label>
         </div>
-        <button className="primary-action" disabled={disabled || !prompt.trim()}>
+        <button className="primary-action" disabled={disabled || (!prompt.trim() && !image)}>
           Generate Scene
         </button>
       </form>
