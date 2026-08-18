@@ -1,4 +1,4 @@
-# SoundScene
+# aux.scene
 
 Text-to-spatial audio generation for immersive, draggable sound scenes.
 
