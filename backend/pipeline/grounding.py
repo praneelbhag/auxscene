@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from backend.app.config import Settings
 
-from .gemini import create_client, generation_config
+from .anthropic import generate_text
 
 
 class GroundingResult(BaseModel):
@@ -15,7 +15,7 @@ class GroundingResult(BaseModel):
 GROUNDING_PROMPT = """You ground abstract concepts into concrete soundscape descriptions.
 
 For the user's abstract concept:
-1. Use Google Search grounding when available.
+1. Use web search grounding when available.
 2. Choose 2-3 short search-query-style source labels, such as "sounds associated with peace".
 3. Extract concrete sounds people associate with the concept.
 4. Synthesize one vivid, physical scene description suitable for audio generation.
@@ -28,14 +28,14 @@ Respond with ONLY valid JSON:
 
 
 def ground_abstract_prompt(prompt: str, settings: Settings) -> GroundingResult:
-    client = create_client(settings)
-    response = client.models.generate_content(
-        model=settings.gemini_model,
-        contents=f"{GROUNDING_PROMPT}\n\nAbstract concept: {prompt}",
-        config=generation_config(settings, json_mode=True, google_search=True),
+    response_text = generate_text(
+        prompt=f"{GROUNDING_PROMPT}\n\nAbstract concept: {prompt}",
+        settings=settings,
+        max_tokens=1024,
+        web_search=True,
     )
 
-    return _parse_grounding_response(response.text, prompt)
+    return _parse_grounding_response(response_text, prompt)
 
 
 def _parse_grounding_response(text: str | None, prompt: str) -> GroundingResult:

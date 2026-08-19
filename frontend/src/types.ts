@@ -27,12 +27,6 @@ export type SoundElement = {
   cache_key_hint?: string | null;
   cache_hit?: boolean;
   cache_similarity?: number | null;
-  audio_review?: {
-    score?: number | null;
-    description?: string | null;
-    issues?: string[];
-    suggested_prompt?: string | null;
-  } | null;
   playback_warning?: string | null;
   individual_audio_url?: string;
   editor_state?: {

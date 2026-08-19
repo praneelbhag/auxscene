@@ -1,6 +1,6 @@
 # SoundScene Audio Pipeline
 
-This pipeline keeps the current Gemini + ElevenLabs + deterministic DSP architecture, but shifts the system from "generate several sounds and sum them" to a WavJourney-style composition plan.
+This pipeline uses Claude + ElevenLabs + deterministic DSP, shifting the system from "generate several sounds and sum them" to a WavJourney-style composition plan.
 
 ## Why This Path
 
@@ -34,25 +34,19 @@ AudioLDM 2 is useful to know about because it can generate or re-synthesize broa
    - conservative RMS target
    - peak headroom
    - soft limiting
-9. Cache only accepted final stems.
+9. Cache stems that pass the local audible-signal check.
 10. Let the spatial editor regenerate individual stems with user edits.
 
-## Reviewer Role
+## Quality Guardrails
 
-The Gemini audio reviewer answers "does this stem sound like the intended prompt and is it comfortable?" It does not replace audio engineering. The deterministic DSP layer answers "does this sit naturally in the scene?"
+Model-based audio review is currently disabled. The deterministic DSP and local signal checks handle:
 
-Reviewer output is useful for:
-- wrong sound family
-- unwanted speech or music
-- harsh or overly dense generated sound
-- suggested prompt for one retry
-
-DSP output is useful for:
 - loudness
 - one element dominating
 - harsh high frequencies
 - abrupt starts and ends
 - scene-level sensory overload
+- near-silent stems, which receive one clearer ElevenLabs prompt retry
 
 ## Mix Defaults
 
@@ -80,7 +74,7 @@ Add a neural polish stage behind a feature flag:
 
 1. Export the deterministic mixed WAV.
 2. Send it to an audio-to-audio model such as AudioLDM 2 with a style prompt like "cohesive natural outdoor ambience, realistic acoustic space, gentle balanced mix."
-3. Review the polished result.
-4. Keep it only if it improves score and does not introduce artifacts.
+3. Compare the polished result with the deterministic mix.
+4. Keep it only after a future evaluation stage confirms that it does not introduce artifacts.
 
 This should remain optional because neural re-synthesis can blur precise sound sources or introduce unexpected content.

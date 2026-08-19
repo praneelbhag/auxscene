@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from backend.app.config import Settings
 
-from .gemini import create_client, generation_config
+from .anthropic import generate_text
 from .schemas import GenerationSettings, MixSettings, SoundElement
 
 
@@ -111,22 +111,21 @@ def refine_sound_prompts(
         "elements": [element.model_dump() for element in elements],
     }
     try:
-        client = create_client(settings)
-        response = client.models.generate_content(
-            model=settings.gemini_model,
-            contents=(
+        response_text = generate_text(
+            prompt=(
                 PROMPT_REFINER_PROMPT.replace(
                     "{elevenlabs_prompting_guide}",
                     ELEVENLABS_PROMPTING_GUIDE,
                 )
                 + f"\n\nInput JSON:\n{json.dumps(payload)}"
             ),
-            config=generation_config(settings, json_mode=True),
+            settings=settings,
+            max_tokens=4096,
         )
     except Exception:
         return _fallback_refine(elements)
 
-    result = _parse_refiner_response(response.text)
+    result = _parse_refiner_response(response_text)
     if not result:
         return _fallback_refine(elements)
 

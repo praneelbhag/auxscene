@@ -64,12 +64,6 @@ export interface SpatialElement {
   cache_key_hint?: string | null;
   cache_hit?: boolean;
   cache_similarity?: number | null;
-  audio_review?: {
-    score?: number | null;
-    description?: string | null;
-    issues?: string[];
-    suggested_prompt?: string | null;
-  } | null;
   playback_warning?: string | null;
   editor_state?: {
     clipStart?: number;
@@ -623,7 +617,7 @@ export default function SpatialEditor({
           onMuteToggle={handleMuteToggle}
           onSoloToggle={handleSoloToggle}
           onPlayToggle={handleElementPlayToggle}
-          onRegenerate={handleRegenerate}
+          onRegenerate={onRegenerate ? handleRegenerate : undefined}
           onAutomationToggle={handleAutomationToggle}
           onFadeToggle={handleFadeToggle}
           onDelete={handleDelete}

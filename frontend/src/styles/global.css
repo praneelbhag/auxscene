@@ -1664,3 +1664,33 @@ input[type="range"] {
 }
 
 .history-delete:hover { border-color: oklch(38% 0.055 22); color: oklch(70% 0.08 22); }
+
+/* Fixed disclosure for the public, prebuilt-audio demo. */
+.demo-notice {
+  position: fixed;
+  z-index: 20;
+  top: 18px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 12px;
+  border: 1px solid oklch(66% 0.06 250 / 0.45);
+  border-radius: 999px;
+  color: var(--text-2);
+  background: oklch(13% 0.014 250 / 0.9);
+  box-shadow: 0 8px 24px oklch(0% 0 0 / 0.24);
+  font-size: 0.8rem;
+}
+
+.demo-notice strong { color: var(--text); }
+
+@media (max-width: 600px) {
+  .demo-notice {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    justify-content: center;
+    text-align: center;
+  }
+}

@@ -38,13 +38,11 @@ async def health_check() -> dict[str, object]:
     return {
         "status": "ok",
         "missingProviderKeys": settings.missing_provider_keys,
-        "llmModel": settings.gemini_model,
-        "thinkingLevel": settings.gemini_thinking_level,
-        "googleSearchGroundingEnabled": settings.enable_google_search_grounding,
-        "imageModel": settings.gemini_image_model,
-        "imageAspectRatio": settings.gemini_image_aspect_ratio,
+        "llmProvider": "anthropic",
+        "llmModel": settings.anthropic_model,
+        "webSearchGroundingEnabled": settings.enable_web_search_grounding,
+        "imageGenerationEnabled": False,
         "audioCacheEnabled": settings.audio_cache_enabled,
-        "audioReviewEnabled": settings.audio_review_enabled,
-        "audioReviewAutoRetry": settings.audio_review_auto_retry,
+        "audioReviewEnabled": False,
         "elevenLabsMaxConcurrentRequests": settings.elevenlabs_max_concurrent_requests,
     }

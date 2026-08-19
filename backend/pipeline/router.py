@@ -53,7 +53,7 @@ async def decompose(request: DecomposeRequest) -> DecomposeResponse:
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Gemini pipeline failed: {exc}",
+            detail=f"Claude pipeline failed: {exc}",
         ) from exc
 
     return DecomposeResponse(
@@ -122,7 +122,7 @@ async def decompose_image(
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Gemini image pipeline failed: {exc}",
+            detail=f"Claude image-analysis pipeline failed: {exc}",
         ) from exc
 
     return DecomposeResponse(

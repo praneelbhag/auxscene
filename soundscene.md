@@ -43,14 +43,14 @@ User provides a text description of a scene. Can be concrete ("rainy Tokyo stree
 
 ### Step 2 — Abstract Detection + Web Search
 
-Gemini classifies the input as concrete or abstract.
+Claude classifies the input as concrete or abstract.
 
-- **If abstract:** uses Gemini with Google Search grounding to retrieve targeted results ("sounds associated with peace", "ambient sounds for serenity"), reads results, extracts concrete sound descriptors
+- **If abstract:** uses Claude web search to retrieve targeted results ("sounds associated with peace", "ambient sounds for serenity"), reads results, and extracts concrete sound descriptors
 - **If concrete:** skips directly to decomposition
 
 ### Step 3 — LLM Decomposition
 
-Gemini takes the concrete descriptors and decomposes them into individual sound elements with spatial metadata:
+Claude takes the concrete descriptors and decomposes them into individual sound elements with spatial metadata:
 
 ```json
 {
@@ -70,9 +70,9 @@ Each element is sent as an individual prompt to ElevenLabs Sound Effects API V2.
 
 Per element: pan and volume are derived from (x, y) coordinates. Reverb is applied via `pedalboard`. All tracks are layered onto a timeline and exported as a binaural WAV via `pydub`.
 
-### Step 6 — Visual Generation
+### Step 6 — Result and Editing
 
-The original scene description is sent to Nano Banana Pro via the Gemini API in parallel with audio generation, producing a matching image displayed alongside the audio player.
+The mixed audio and individual stems are returned to the frontend. Scene-image generation is disabled; the result view uses its existing visual placeholder while retaining the audio player and spatial editor.
 
 ---
 
@@ -93,11 +93,10 @@ Post-generation, users interact with a top-down 2D map with the listener fixed a
 
 | Component | Tool |
 |---|---|
-| Abstract detection + decomposition | Gemini 3.1 Pro Preview (Google GenAI SDK) |
-| Web search grounding | Gemini Google Search grounding |
+| Abstract detection + decomposition | Claude via the Anthropic SDK |
+| Web search grounding | Claude web search |
 | Sound generation | ElevenLabs Sound Effects API V2 |
 | Spatial DSP + mixing | pedalboard + pydub |
-| Image generation | Nano Banana Pro via Gemini API |
 | Real-time spatial audio | Web Audio API |
 | Backend | FastAPI |
 | Frontend | React |
@@ -108,7 +107,7 @@ Post-generation, users interact with a top-down 2D map with the listener fixed a
 
 1. Type "peace and serenity" — watch web search fire, concrete descriptors extracted in real time
 2. Decomposition JSON appears, parallel generation progress bar runs
-3. Image and audio player appear simultaneously (~20 seconds total)
+3. The mixed audio player appears when generation finishes
 4. Open spatial editor — labeled dots on 2D map
 5. Put on headphones, drag the wind chime dot from left to right, hear it move
 6. Swap to "rainy Tokyo street" — show it skips web search entirely, faster generation
