@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from backend.app.config import Settings
 
-from .gemini import create_client, generation_config
+from .anthropic import generate_text
 from .schemas import SoundElement
 
 
@@ -48,14 +48,13 @@ Respond with ONLY valid JSON matching this structure:
 
 
 def decompose_scene(concrete_description: str, settings: Settings) -> DecompositionResult:
-    client = create_client(settings)
-    response = client.models.generate_content(
-        model=settings.gemini_model,
-        contents=f"{DECOMPOSER_PROMPT}\n\nScene: {concrete_description}",
-        config=generation_config(settings, json_mode=True),
+    response_text = generate_text(
+        prompt=f"{DECOMPOSER_PROMPT}\n\nScene: {concrete_description}",
+        settings=settings,
+        max_tokens=2048,
     )
 
-    result = _parse_decomposition_response(response.text, concrete_description)
+    result = _parse_decomposition_response(response_text, concrete_description)
     return _normalize_decomposition(result)
 
 

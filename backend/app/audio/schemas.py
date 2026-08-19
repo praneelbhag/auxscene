@@ -20,13 +20,6 @@ class MixSettings(BaseModel):
     fade_ms: float | None = Field(default=None, ge=0.0, le=2000.0)
 
 
-class AudioReview(BaseModel):
-    score: float | None = Field(default=None, ge=0.0, le=1.0)
-    description: str | None = None
-    issues: list[str] = Field(default_factory=list)
-    suggested_prompt: str | None = None
-
-
 class SceneElement(BaseModel):
     id: str
     sound_prompt: str
@@ -62,7 +55,6 @@ class GenerateElementResponse(BaseModel):
     cache_key_hint: str | None = None
     cache_hit: bool = False
     cache_similarity: float | None = None
-    audio_review: AudioReview | None = None
     playback_warning: str | None = None
     individual_audio_url: str
 

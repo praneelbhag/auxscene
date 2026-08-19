@@ -27,7 +27,7 @@ export function ResultView({
           <div aria-hidden="true" className="result-hero-placeholder" />
         )}
         <div className="result-copy">
-          <p className="eyebrow">Generated Scene</p>
+          <p className="eyebrow">Prebuilt Audio Demo</p>
           <h1>{decomposeData.original_prompt}</h1>
           <p>{decomposeData.concrete_description}</p>
         </div>
@@ -40,7 +40,7 @@ export function ResultView({
             Open Spatial Editor
           </button>
           <button className="secondary-action" onClick={onNewScene} type="button">
-            New Scene
+            Reset Demo
           </button>
         </div>
       </div>

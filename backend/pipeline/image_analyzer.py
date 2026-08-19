@@ -1,11 +1,10 @@
 import json
 
-from google.genai import types
 from pydantic import BaseModel, Field, ValidationError
 
 from backend.app.config import Settings
 
-from .gemini import create_client, generation_config
+from .anthropic import generate_text
 
 
 class VisualSoundObject(BaseModel):
@@ -60,20 +59,20 @@ def analyze_image_scene(
     settings: Settings,
     user_context: str | None = None,
 ) -> ImageSceneAnalysis:
-    client = create_client(settings)
     prompt = IMAGE_ANALYZER_PROMPT.replace(
         "{user_context}",
         user_context.strip() if user_context and user_context.strip() else "None",
     )
-    image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
-
-    response = client.models.generate_content(
-        model=settings.gemini_model,
-        contents=[prompt, image_part],
-        config=generation_config(settings, json_mode=True, google_search=True),
+    response_text = generate_text(
+        prompt=prompt,
+        settings=settings,
+        max_tokens=2048,
+        image_bytes=image_bytes,
+        image_mime_type=mime_type,
+        web_search=True,
     )
 
-    return _parse_image_analysis(response.text)
+    return _parse_image_analysis(response_text)
 
 
 def _parse_image_analysis(text: str | None) -> ImageSceneAnalysis:

@@ -1,0 +1,73 @@
+{
+  "id": "your-scene",
+  "title": "Your Scene",
+  "decompose_data": {
+    "original_prompt": "Describe the scene",
+    "is_abstract": false,
+    "grounding_sources": [],
+    "concrete_description": "A concise description of what the listener hears.",
+    "elements": [
+      {
+        "id": "elem_1",
+        "sound_prompt": "steady background ambience, no speech, no music",
+        "label": "Ambience",
+        "x": 0,
+        "y": 0.8,
+        "reverb": 0.35,
+        "layer": "background"
+      },
+      {
+        "id": "elem_2",
+        "sound_prompt": "distinct sound on the listener's left, no speech, no music",
+        "label": "Left Detail",
+        "x": -0.55,
+        "y": 0.45,
+        "reverb": 0.2,
+        "layer": "midground"
+      },
+      {
+        "id": "elem_3",
+        "sound_prompt": "nearby foreground detail, no speech, no music",
+        "label": "Close Detail",
+        "x": 0.55,
+        "y": 0.2,
+        "reverb": 0.1,
+        "layer": "foreground"
+      }
+    ]
+  },
+  "generate_data": {
+    "audio_url": "/demo/your-scene/mix.mp3",
+    "image_url": null,
+    "duration_seconds": 15,
+    "elements": [
+      {
+        "id": "elem_1",
+        "label": "Ambience",
+        "x": 0,
+        "y": 0.8,
+        "reverb": 0.35,
+        "layer": "background",
+        "individual_audio_url": "/demo/your-scene/ambience.mp3"
+      },
+      {
+        "id": "elem_2",
+        "label": "Left Detail",
+        "x": -0.55,
+        "y": 0.45,
+        "reverb": 0.2,
+        "layer": "midground",
+        "individual_audio_url": "/demo/your-scene/left-detail.mp3"
+      },
+      {
+        "id": "elem_3",
+        "label": "Close Detail",
+        "x": 0.55,
+        "y": 0.2,
+        "reverb": 0.1,
+        "layer": "foreground",
+        "individual_audio_url": "/demo/your-scene/close-detail.mp3"
+      }
+    ]
+  }
+}

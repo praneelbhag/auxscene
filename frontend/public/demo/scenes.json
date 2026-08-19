@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "id": "rainy-tokyo",
+      "title": "Rainy Tokyo at night",
+      "mix": "/demo/rainy-tokyo/mix.wav",
+      "stems": [
+        "/demo/rainy-tokyo/heavy-rain.wav",
+        "/demo/rainy-tokyo/footsteps-wet-pavement.wav",
+        "/demo/rainy-tokyo/passing-car.wav",
+        "/demo/rainy-tokyo/neon-sign-buzz.wav",
+        "/demo/rainy-tokyo/distant-street-ambience.wav"
+      ]
+    }
+  ]
+}

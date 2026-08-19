@@ -1,18 +1,15 @@
+import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import uuid4
-import asyncio
 
-from fastapi import APIRouter, HTTPException, Request, status
 import httpx
+from fastapi import APIRouter, HTTPException, Request, status
 
 from ..config import get_settings
-from .audio_review import review_audio_file
 from .cache import get_cached_audio, save_cached_audio
 from .elevenlabs import ElevenLabsGenerationError, generate_sound
-from .image_gen import generate_image
 from .schemas import (
-    AudioReview,
     GenerateElementResponse,
     GenerateRequest,
     GenerateResponse,
@@ -25,8 +22,8 @@ from .spatial_dsp import (
     AudioTrack,
     PositionedAudioTrack,
     apply_spatial,
-    audio_level_dbfs,
     audio_bytes_to_audio_track,
+    audio_level_dbfs,
     condition_for_natural_mix,
     enforce_duration,
     export_wav,
@@ -144,31 +141,6 @@ def _playback_warning(audio: AudioTrack, element: SceneElement) -> str | None:
     return None
 
 
-def _should_retry_after_review(audio_review: AudioReview | None) -> bool:
-    if not settings.audio_review_auto_retry or audio_review is None:
-        return False
-    if audio_review.score is None or not audio_review.suggested_prompt:
-        return False
-    return audio_review.score < settings.audio_review_min_score
-
-
-def _apply_reviewer_suggestion(
-    element: SceneElement,
-    audio_review: AudioReview,
-) -> SceneElement:
-    if not audio_review.suggested_prompt:
-        return element
-
-    data = element.model_dump()
-    data["sound_prompt"] = audio_review.suggested_prompt
-    data["cache_key_hint"] = audio_review.suggested_prompt.lower()
-    data["reviewer_notes"] = [
-        *element.reviewer_notes,
-        f"Audio reviewer retry: {', '.join(audio_review.issues[:2]) or 'low match score'}",
-    ]
-    return SceneElement.model_validate(data)
-
-
 def _apply_audible_retry(element: SceneElement) -> SceneElement:
     data = element.model_dump()
     data["sound_prompt"] = (
@@ -196,12 +168,11 @@ async def _render_element(
     duration_seconds: float,
     client: httpx.AsyncClient,
 ) -> tuple[AudioTrack, GenerateElementResponse]:
-    defer_cache_save = settings.audio_review_enabled and settings.audio_review_auto_retry
     audio_bytes, cache_hit, cache_similarity = await _get_or_generate_audio_bytes(
         element=element,
         duration_seconds=duration_seconds,
         client=client,
-        save_cache=not defer_cache_save,
+        save_cache=False,
     )
     processed, elem_file = _process_element_audio(
         element=element,
@@ -230,39 +201,7 @@ async def _render_element(
         )
         playback_warning = _playback_warning(processed, response_element)
 
-    audio_review: AudioReview | None = None
-    if not cache_hit:
-        audio_review = await review_audio_file(
-            audio_path=elem_file,
-            element=response_element,
-            settings=settings,
-        )
-
-    if _should_retry_after_review(audio_review):
-        response_element = _apply_reviewer_suggestion(response_element, audio_review)
-        audio_bytes, cache_hit, cache_similarity = await _get_or_generate_audio_bytes(
-            element=response_element,
-            duration_seconds=duration_seconds,
-            client=client,
-            save_cache=False,
-        )
-        processed, elem_file = _process_element_audio(
-            element=response_element,
-            audio_bytes=audio_bytes,
-            output_dir=output_dir,
-            job_id=job_id,
-            duration_seconds=duration_seconds,
-        )
-        playback_warning = _playback_warning(processed, response_element)
-        audio_review = None
-        if not cache_hit:
-            audio_review = await review_audio_file(
-                audio_path=elem_file,
-                element=response_element,
-                settings=settings,
-            )
-
-    if defer_cache_save and not cache_hit and not playback_warning:
+    if not cache_hit and not playback_warning:
         save_cached_audio(response_element, settings, duration_seconds, audio_bytes)
 
     return processed, GenerateElementResponse(
@@ -279,7 +218,6 @@ async def _render_element(
         cache_key_hint=response_element.cache_key_hint,
         cache_hit=cache_hit,
         cache_similarity=cache_similarity,
-        audio_review=audio_review,
         playback_warning=playback_warning,
         individual_audio_url=_static_url(request, elem_file),
     )
@@ -318,14 +256,6 @@ async def generate_scene(payload: GenerateRequest, request: Request) -> Generate
     scene_stem = f"scene_{job_id}"
 
     try:
-        image_task = asyncio.create_task(
-            generate_image(
-                prompt=payload.concrete_description or payload.original_prompt,
-                output_dir=output_dir,
-                scene_id=job_id,
-            )
-        )
-
         async with httpx.AsyncClient() as client:
             render_tasks = [
                 asyncio.create_task(
@@ -366,27 +296,17 @@ async def generate_scene(payload: GenerateRequest, request: Request) -> Generate
         export_wav(mixed, mixed_file)
 
         audio_url = _static_url(request, mixed_file)
-        image_url = None
-        try:
-            image_file = await image_task
-            image_url = _static_url(request, image_file)
-        except Exception as exc:
-            job_state.error = f"Image generation failed: {exc}"
-
         job_state.status = "completed"
         job_state.audio_url = audio_url
-        job_state.image_url = image_url
 
         return GenerateResponse(
             job_id=job_id,
             audio_url=audio_url,
-            image_url=image_url,
+            image_url=None,
             elements=element_responses,
             duration_seconds=duration,
         )
     except ElevenLabsGenerationError as exc:
-        if "image_task" in locals():
-            image_task.cancel()
         job_state.status = "failed"
         job_state.error = str(exc)
         raise HTTPException(
@@ -394,8 +314,6 @@ async def generate_scene(payload: GenerateRequest, request: Request) -> Generate
             detail=str(exc),
         ) from exc
     except Exception as exc:
-        if "image_task" in locals():
-            image_task.cancel()
         job_state.status = "failed"
         job_state.error = str(exc)
         raise HTTPException(

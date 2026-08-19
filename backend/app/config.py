@@ -4,7 +4,6 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 ROOT_DIR = Path(__file__).resolve().parents[2]
 
 
@@ -15,19 +14,13 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
+    anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
     elevenlabs_api_key: str = Field(default="", alias="ELEVENLABS_API_KEY")
-    gemini_model: str = Field(default="gemini-3.1-pro-preview", alias="GEMINI_MODEL")
-    gemini_image_model: str = Field(
-        default="gemini-3-pro-image-preview",
-        alias="GEMINI_IMAGE_MODEL",
-    )
-    gemini_thinking_level: str = Field(default="medium", alias="GEMINI_THINKING_LEVEL")
-    enable_google_search_grounding: bool = Field(
+    anthropic_model: str = Field(default="claude-sonnet-5", alias="ANTHROPIC_MODEL")
+    enable_web_search_grounding: bool = Field(
         default=True,
-        alias="ENABLE_GOOGLE_SEARCH_GROUNDING",
+        alias="ENABLE_WEB_SEARCH_GROUNDING",
     )
-    gemini_image_aspect_ratio: str = Field(default="16:9", alias="GEMINI_IMAGE_ASPECT_RATIO")
     elevenlabs_model_id: str = Field(
         default="eleven_text_to_sound_v2",
         alias="ELEVENLABS_MODEL_ID",
@@ -44,11 +37,6 @@ class Settings(BaseSettings):
         default=0.92,
         alias="AUDIO_CACHE_SIMILARITY_THRESHOLD",
     )
-    audio_review_enabled: bool = Field(default=True, alias="AUDIO_REVIEW_ENABLED")
-    audio_review_model: str = Field(default="gemini-2.5-flash", alias="AUDIO_REVIEW_MODEL")
-    audio_review_auto_retry: bool = Field(default=True, alias="AUDIO_REVIEW_AUTO_RETRY")
-    audio_review_min_score: float = Field(default=0.72, alias="AUDIO_REVIEW_MIN_SCORE")
-
     backend_host: str = Field(default="127.0.0.1", alias="BACKEND_HOST")
     backend_port: int = Field(default=8000, alias="BACKEND_PORT")
     cors_origins: str = Field(
@@ -75,7 +63,7 @@ class Settings(BaseSettings):
     @property
     def missing_provider_keys(self) -> list[str]:
         required_keys = {
-            "GEMINI_API_KEY": self.gemini_api_key,
+            "ANTHROPIC_API_KEY": self.anthropic_api_key,
             "ELEVENLABS_API_KEY": self.elevenlabs_api_key,
         }
 

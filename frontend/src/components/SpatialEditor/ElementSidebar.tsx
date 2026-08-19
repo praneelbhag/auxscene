@@ -26,12 +26,6 @@ interface SidebarElement {
   cache_hit?: boolean;
   cache_similarity?: number | null;
   reviewer_notes?: string[];
-  audio_review?: {
-    score?: number | null;
-    description?: string | null;
-    issues?: string[];
-    suggested_prompt?: string | null;
-  } | null;
   playback_warning?: string | null;
 }
 
@@ -42,7 +36,7 @@ interface ElementSidebarProps {
   onMuteToggle: (id: string) => void;
   onSoloToggle: (id: string) => void;
   onPlayToggle: (id: string) => void;
-  onRegenerate: (id: string, editInstruction: string) => void;
+  onRegenerate?: (id: string, editInstruction: string) => void;
   onAutomationToggle: (id: string) => void;
   onFadeToggle: (id: string) => void;
   onDelete: (id: string) => void;
@@ -171,16 +165,18 @@ export function ElementSidebar({
             >
               Fade
             </button>
-            <button
-              className="refine-toggle"
-              type="button"
-              onClick={() => setExpanded((s) => ({ ...s, [el.id]: !s[el.id] }))}
-            >
-              {expanded[el.id] ? "▲ Refine" : "▼ Refine"}
-            </button>
+            {onRegenerate && (
+              <button
+                className="refine-toggle"
+                type="button"
+                onClick={() => setExpanded((s) => ({ ...s, [el.id]: !s[el.id] }))}
+              >
+                {expanded[el.id] ? "▲ Refine" : "▼ Refine"}
+              </button>
+            )}
           </div>
 
-          {expanded[el.id] && (
+          {onRegenerate && expanded[el.id] && (
             <>
               <label className="edit-label">
                 <textarea

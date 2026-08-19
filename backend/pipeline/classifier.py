@@ -1,7 +1,6 @@
 from backend.app.config import Settings
 
-from .gemini import create_client, generation_config
-
+from .anthropic import generate_text
 
 CLASSIFIER_PROMPT = """Classify whether this scene description is ABSTRACT or CONCRETE.
 ABSTRACT: emotional, conceptual, no specific physical sound sources (e.g., "peace", "chaos", "nostalgia")
@@ -10,12 +9,11 @@ Respond with only: ABSTRACT or CONCRETE"""
 
 
 def classify_prompt(prompt: str, settings: Settings) -> bool:
-    client = create_client(settings)
-    response = client.models.generate_content(
-        model=settings.gemini_model,
-        contents=f"{CLASSIFIER_PROMPT}\n\nScene description: {prompt}",
-        config=generation_config(settings),
+    response = generate_text(
+        prompt=f"{CLASSIFIER_PROMPT}\n\nScene description: {prompt}",
+        settings=settings,
+        max_tokens=64,
     )
 
-    classification = (response.text or "").strip().upper()
+    classification = response.strip().upper()
     return classification.startswith("ABSTRACT")
